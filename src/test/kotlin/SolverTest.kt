@@ -27,4 +27,12 @@ class SolverTest {
         val result = solver.solve(input)
         assertEquals("365427819487931526129856374852793641613248957974165283241389765538674192796512438", result)
     }
+
+    @Test
+    fun hiddenSingles() {
+        val input = "..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4.."
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertEquals("672435198549178362831629547368951274917243856254867931193784625486592713725316489", result)
+    }
 }
