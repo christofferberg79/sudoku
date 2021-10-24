@@ -1,8 +1,13 @@
 package cberg.sudoku
 
+val rows = List<Iterable<Int>>(9) { r -> (r * 9)..(r * 9 + 8) }
+val cols = List<Iterable<Int>>(9) { c -> c..(c + 72) step 9 }
+val blocks = listOf(0, 3, 6, 27, 30, 33, 54, 57, 60)
+    .map { i -> listOf(0, 1, 2, 9, 10, 11, 18, 19, 20).map { o -> i + o } }
+
 class Solver {
     private val d = CharArray(81) { '.' }
-    private val possibles = Array(81) { mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9') }
+    private val candidates = Array(81) { mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9') }
 
     fun solve(input: String): String {
         setInput(input)
@@ -17,29 +22,9 @@ class Solver {
     private fun set(i: Int, c: Char) {
         if (c in '1'..'9') {
             d[i] = c
-            rowIndicesOf(i).forEach { possibles[it].remove(c) }
-            colIndicesOf(i).forEach { possibles[it].remove(c) }
-            blockIndicesOf(i).forEach { possibles[it].remove(c) }
-            possibles[i].clear()
-            possibles[i].add(c)
+            affectedBy(i).forEach { candidates[it].remove(c) }
+            candidates[i].clear()
         }
-    }
-
-    private fun rowIndicesOf(i: Int): Iterable<Int> {
-        val first = i - i % 9
-        val last = first + 8
-        return first..last
-    }
-
-    private fun colIndicesOf(i: Int): Iterable<Int> {
-        val first = i % 9
-        val last = first + 72
-        return first..last step 9
-    }
-
-    private fun blockIndicesOf(i: Int): Iterable<Int> {
-        val first = i - i % 27 + i % 9 - i % 3
-        return listOf(0, 1, 2, 9, 10, 11, 18, 19, 20).map { first + it }
     }
 
     private fun solve() {
@@ -51,9 +36,9 @@ class Solver {
     }
 
     private fun nakedSingles(): Boolean {
-        d.forEachIndexed { i, c ->
-            if (c == '.' && possibles[i].size == 1) {
-                set(i, possibles[i].single())
+        candidates.forEachIndexed { i, candidates ->
+            if (candidates.size == 1) {
+                set(i, candidates.single())
                 return true
             }
         }
@@ -63,20 +48,35 @@ class Solver {
     private fun hiddenSingles(): Boolean {
         for (group in groups()) {
             for (c in '1'..'9') {
-                group.singleOrNull { i -> d[i] == '.' && c in possibles[i] }
-                    ?.let { i ->
-                        set(i, c)
-                        return true
-                    }
+                val i = group.singleOrNull { i -> c in candidates[i] }
+                if (i != null) {
+                    set(i, c)
+                    return true
+                }
             }
         }
         return false
     }
 
-    private fun groups(): List<Iterable<Int>> {
-        val rows = (0..72 step 9).map { rowIndicesOf(it) }
-        val cols = (0..8).map { colIndicesOf(it) }
-        val blocks = listOf(0, 3, 6, 27, 30, 33, 54, 57, 60).map { blockIndicesOf(it) }
-        return rows + cols + blocks
+    private fun groups(): Sequence<Iterable<Int>> {
+        return rows.asSequence() + cols.asSequence() + blocks.asSequence()
+    }
+
+    private fun affectedBy(i: Int): Sequence<Int> {
+        return rowOf(i).asSequence() + colOf(i).asSequence() + blockOf(i).asSequence()
+    }
+
+    private fun rowOf(i: Int): Iterable<Int> {
+        return rows[i / 9]
+    }
+
+    private fun colOf(i: Int): Iterable<Int> {
+        return cols[i % 9]
+    }
+
+    private fun blockOf(i: Int): Iterable<Int> {
+        val blockRow = i / 27
+        val blockCol = i / 3 % 3
+        return blocks[blockRow * 3 + blockCol]
     }
 }
