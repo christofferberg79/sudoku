@@ -8,6 +8,7 @@ val blocks = listOf(0, 3, 6, 27, 30, 33, 54, 57, 60)
 sealed class Solution
 class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
+object TooHard : Solution()
 
 class Solver {
     private val d = CharArray(81) { '.' }

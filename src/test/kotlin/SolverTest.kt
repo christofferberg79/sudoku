@@ -94,6 +94,14 @@ class SolverTest {
         val result = solver.solve(input)
         assertIs<InvalidPuzzle>(result)
     }
+
+    @Test
+    fun hardestPuzzle() {
+        val input = "........8..3...4...9..2..6.....79.......612...6.5.2.7...8...5...1.....2.4.5.....3"
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<TooHard>(result)
+    }
 }
 
 private fun assertUniqueSolution(expected: String, result: Solution) {
