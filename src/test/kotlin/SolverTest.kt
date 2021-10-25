@@ -70,6 +70,30 @@ class SolverTest {
         val result = solver.solve(input)
         assertIs<InvalidPuzzle>(result)
     }
+
+    @Test
+    fun duplicateGivenInBox() {
+        val input = "..9.7...5..21..9..1...28....7...5..1..851.....5....3.......3..68........21.....87"
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<InvalidPuzzle>(result)
+    }
+
+    @Test
+    fun duplicateGivenInColumn() {
+        val input = "6.159.....9..1............4.7.314..6.24.....5..3....1...6.....3...9.2.4......16.."
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<InvalidPuzzle>(result)
+    }
+
+    @Test
+    fun duplicateGivenInRow() {
+        val input = ".4.1..35.............2.5......4.89..26.....12.5.3....7..4...16.6....7....1..8..2."
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<InvalidPuzzle>(result)
+    }
 }
 
 private fun assertUniqueSolution(expected: String, result: Solution) {
