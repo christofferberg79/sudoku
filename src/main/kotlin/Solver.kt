@@ -17,14 +17,37 @@ class Solver {
     fun solve(input: String): Solution {
         setInput(input)
 
+        if (!isValidPuzzle()) {
+            return InvalidPuzzle
+        }
+
         solve()
 
         return if ('.' in d) {
-            InvalidPuzzle
+            TooHard
         } else {
             UniqueSolution(getOutput())
         }
     }
+
+    private fun isValidPuzzle(): Boolean {
+        if (insufficientGivens()) {
+            return false
+        }
+        if (duplicateGivens()) {
+            return false
+        }
+        return true
+    }
+
+    private fun duplicateGivens() = groups().any { group ->
+        group.filter { d[it] in '1'..'9' }
+            .groupingBy { d[it] }
+            .eachCount()
+            .values.any { it > 1 }
+    }
+
+    private fun insufficientGivens() = d.count { c -> c in '1'..'9' } < 17
 
     private fun setInput(input: String) = input.forEachIndexed { i, c -> set(i, c) }
 
