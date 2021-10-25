@@ -62,6 +62,14 @@ class SolverTest {
         val result = solver.solve(input)
         assertIs<InvalidPuzzle>(result)
     }
+
+    @Test
+    fun insufficientGivens() {
+        val input = "...........5....9...4....1.2....3.5....7.....438...2......9.....1.4...6.........."
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<InvalidPuzzle>(result)
+    }
 }
 
 private fun assertUniqueSolution(expected: String, result: Solution) {
