@@ -54,6 +54,14 @@ class SolverTest {
         val result = solver.solve(input)
         assertIs<InvalidPuzzle>(result)
     }
+
+    @Test
+    fun singleGiven() {
+        val input = "........................................1........................................"
+        val solver = Solver()
+        val result = solver.solve(input)
+        assertIs<InvalidPuzzle>(result)
+    }
 }
 
 private fun assertUniqueSolution(expected: String, result: Solution) {
