@@ -5,14 +5,24 @@ val cols = List<Iterable<Int>>(9) { c -> c..(c + 72) step 9 }
 val blocks = listOf(0, 3, 6, 27, 30, 33, 54, 57, 60)
     .map { i -> listOf(0, 1, 2, 9, 10, 11, 18, 19, 20).map { o -> i + o } }
 
+sealed class Solution
+class UniqueSolution(val solution: String) : Solution()
+object InvalidPuzzle : Solution()
+
 class Solver {
     private val d = CharArray(81) { '.' }
     private val candidates = Array(81) { mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9') }
 
-    fun solve(input: String): String {
+    fun solve(input: String): Solution {
         setInput(input)
+
         solve()
-        return getOutput()
+
+        return if ('.' in d) {
+            InvalidPuzzle
+        } else {
+            UniqueSolution(getOutput())
+        }
     }
 
     private fun setInput(input: String) = input.forEachIndexed { i, c -> set(i, c) }
