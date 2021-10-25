@@ -5,8 +5,9 @@ fun main(args: Array<String>) {
         val input = args[1]
         val solver = Solver()
         when (val result = solver.solve(input)) {
-            is UniqueSolution -> println("Unique solution found: ${result.solution}")
             is InvalidPuzzle -> println("Invalid puzzle")
+            is UniqueSolution -> println("Unique solution found: ${result.solution}")
+            is TooHard -> println("Too hard")
         }
     }
 }
