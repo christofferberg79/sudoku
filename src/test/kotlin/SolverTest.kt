@@ -71,8 +71,71 @@ class SolverTest {
     @Test
     fun hardestPuzzle() {
         val input = "........8..3...4...9..2..6.....79.......612...6.5.2.7...8...5...1.....2.4.5.....3"
-        val result = solve(input)
-        assertIs<TooHard>(result)
+        testTooHardPuzzle(input)
+    }
+
+    @Test
+    fun sudokuDotComExpert1() {
+        val input = "..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65"
+        testTooHardPuzzle(input)
+
+        // TODO when solver is improved:
+//        val solution = "694751238812693547357482691135276489946138752728945316581367924269514873473829165"
+//        testPuzzleWithUniqueSolution(input, solution)
+    }
+
+    @Test
+    fun sudokuDotComExpert2() {
+        val input = "..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65"
+        testTooHardPuzzle(input)
+
+        // TODO when solver is improved:
+//        val solution = "694751238812693547357482691135276489946138752728945316581367924269514873473829165"
+//        testPuzzleWithUniqueSolution(input, solution)
+    }
+
+    @Test
+    fun sudokuDotComExpert3() {
+        val input = ".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37."
+        testTooHardPuzzle(input)
+
+        // TODO when solver is improved:
+//        val solution = "479132586538764912162598437687915243913427865254683791726349158345871629891256374"
+//        testPuzzleWithUniqueSolution(input, solution)
+    }
+
+    @Test
+    fun sudokuDotComExpert4() {
+        val input = "6725..................49....1.....7...3.854..9.....56....2.....2..7.3.9..5....83."
+        testTooHardPuzzle(input)
+
+        // TODO when solver is improved:
+//        val solution = "672531984549827613831649257415962378763185429928374561396218745284753196157496832"
+//        testPuzzleWithUniqueSolution(input, solution)
+    }
+
+    @Test
+    fun sudokuDotComExpert5() {
+        val input = ".....85....1......4736.....6..2....4.....7.3.....95.6.........61.7.8......87.4..."
+        testTooHardPuzzle(input)
+    }
+
+    @Test
+    fun sudokuDotComExpert6() {
+        val input = "...........5...4.93..8...6..3...6....49...2.7..7..5.1.4.6.5.....1..9.7....3..2..."
+        testTooHardPuzzle(input)
+    }
+
+    @Test
+    fun sudokuDotComExpert7() {
+        val input = "5..9...7..6....9.48.......5751.....86..2..5...8......19.....3......4.......5.1..."
+        testTooHardPuzzle(input)
+    }
+
+    @Test
+    fun sudokuDotComExpert8() {
+        val input = ".13..7..6.......24.5.8...7....9.87.........5....67..........9.27.6.3.8....1.2...."
+        testTooHardPuzzle(input)
     }
 }
 
@@ -85,6 +148,11 @@ private fun testPuzzleWithUniqueSolution(input: String, solution: String) {
 private fun testInvalidPuzzle(input: String) {
     val result = solve(input)
     assertIs<InvalidPuzzle>(result)
+}
+
+private fun testTooHardPuzzle(input: String) {
+    val result = solve(input)
+    assertIs<TooHard>(result)
 }
 
 private fun solve(input: String): Solution = Solver().solve(input)
