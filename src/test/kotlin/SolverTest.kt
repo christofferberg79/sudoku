@@ -75,6 +75,24 @@ class SolverTest {
     }
 
     @Test
+    fun unsolvableBox() {
+        val input = ".9.3....1....8..46......8..4.5.6..3...32756...6..1.9.4..1......58..2....2....7.6."
+        testInvalidPuzzle(input)
+    }
+
+    @Test
+    fun unsolvableColumn() {
+        val input = "....41....6.....2...2......32.6.........5..417.......2......23..48......5.1..2..."
+        testInvalidPuzzle(input)
+    }
+
+    @Test
+    fun unsolvableRow() {
+        val input = "9..1....4.14.3.8....3....9....7.8..18....3..........3..21....7...9.4.5..5...16..3"
+        testInvalidPuzzle(input)
+    }
+
+    @Test
     fun hardestPuzzle() {
         val input = "........8..3...4...9..2..6.....79.......612...6.5.2.7...8...5...1.....2.4.5.....3"
         testTooHardPuzzle(input)

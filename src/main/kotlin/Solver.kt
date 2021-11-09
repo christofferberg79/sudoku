@@ -40,6 +40,9 @@ class Solver {
         if (noCandidate()) {
             return false
         }
+        if (missingCandidate()) {
+            return false
+        }
         return true
     }
 
@@ -54,6 +57,12 @@ class Solver {
 
     private fun noCandidate() = (0..80).any { i ->
         d[i] !in '1'..'9' && candidates[i].isEmpty()
+    }
+
+    private fun missingCandidate(): Boolean = ('1'..'9').any { c ->
+        groups().any { group ->
+            group.none { i -> c == d[i] || c in candidates[i] }
+        }
     }
 
     private fun setInput(input: String) = input.forEachIndexed { i, c -> set(i, c) }
