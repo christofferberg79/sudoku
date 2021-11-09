@@ -10,9 +10,25 @@ class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
+class Square {
+    var value: Char? = null
+        private set
+    val candidates = mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9')
+
+    fun isSet() = value != null
+    fun isNotSet() = value == null
+    fun set(c: Char) {
+        value = c
+        candidates.clear()
+    }
+
+    override fun toString(): String {
+        return value?.toString() ?: "."
+    }
+}
+
 class Solver {
-    private val d = CharArray(81) { '.' }
-    private val candidates = Array(81) { mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9') }
+    private val squares = Array(81) { Square() }
 
     fun solve(input: String): Solution {
         setInput(input)
@@ -23,7 +39,7 @@ class Solver {
 
         solve()
 
-        return if ('.' in d) {
+        return if (squares.any(Square::isNotSet)) {
             TooHard
         } else {
             UniqueSolution(getOutput())
@@ -47,33 +63,33 @@ class Solver {
     }
 
     private fun duplicateGivens() = groups().any { group ->
-        group.filter { d[it] in '1'..'9' }
-            .groupingBy { d[it] }
+        group.filter { squares[it].isSet() }
+            .groupingBy { squares[it].value }
             .eachCount()
             .values.any { it > 1 }
     }
 
-    private fun insufficientGivens() = d.count { c -> c in '1'..'9' } < 17
+    private fun insufficientGivens() = squares.count(Square::isSet) < 17
 
-    private fun noCandidate() = (0..80).any { i ->
-        d[i] !in '1'..'9' && candidates[i].isEmpty()
+    private fun noCandidate() = squares.any {
+        it.isNotSet() && it.candidates.isEmpty()
     }
 
-    private fun missingCandidate(): Boolean = ('1'..'9').any { c ->
+    private fun missingCandidate() = ('1'..'9').any { c ->
         groups().any { group ->
-            group.none { i -> c == d[i] || c in candidates[i] }
+            group.map { i -> squares[i] }
+                .none { s -> c == s.value || c in s.candidates }
         }
     }
 
     private fun setInput(input: String) = input.forEachIndexed { i, c -> set(i, c) }
 
-    private fun getOutput() = d.joinToString(separator = "")
+    private fun getOutput() = squares.joinToString(separator = "")
 
     private fun set(i: Int, c: Char) {
         if (c in '1'..'9') {
-            d[i] = c
-            affectedBy(i).forEach { candidates[it].remove(c) }
-            candidates[i].clear()
+            squares[i].set(c)
+            affectedBy(i).forEach { squares[it].candidates.remove(c) }
         }
     }
 
@@ -86,9 +102,9 @@ class Solver {
     }
 
     private fun nakedSingles(): Boolean {
-        candidates.forEachIndexed { i, candidates ->
-            if (candidates.size == 1) {
-                set(i, candidates.single())
+        squares.forEachIndexed { i, s ->
+            if (s.candidates.size == 1) {
+                set(i, s.candidates.single())
                 return true
             }
         }
@@ -98,7 +114,7 @@ class Solver {
     private fun hiddenSingles(): Boolean {
         for (group in groups()) {
             for (c in '1'..'9') {
-                val i = group.singleOrNull { i -> c in candidates[i] }
+                val i = group.singleOrNull { i -> c in squares[i].candidates }
                 if (i != null) {
                     set(i, c)
                     return true
