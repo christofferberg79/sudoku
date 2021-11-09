@@ -1,42 +1,47 @@
 package cberg.sudoku
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.singleWindowApplication
+import java.awt.event.KeyEvent.KEY_PRESSED
 
-fun gui() = application {
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Sudoku",
-        state = rememberWindowState(width = 450.dp, height = 450.dp)
+fun gui() = singleWindowApplication(title = "Sudoku") {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.padding(20.dp)) {
-            game()
-        }
+        game()
     }
 }
 
 @Composable
 private fun game() {
-    val state = remember {
+    var state by remember {
         mutableStateOf("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
     }
 
     Column {
-        for (i1 in 0..54 step 27) {
+        for (row in 0..8) {
             Row {
-                for (i2 in 0..6 step 3) {
-                    block(i1 + i2, state.value)
+                for (col in 0..8) {
+                    val i = row * 9 + col
+                    square(
+                        char = state[i],
+                        onTyped = { char ->
+                            state = state.substring(0, i) + char + state.substring(i + 1)
+                        }
+                    )
                 }
             }
         }
@@ -44,26 +49,30 @@ private fun game() {
 }
 
 @Composable
-fun block(startIndex: Int, state: String) {
-    Column(modifier = Modifier.border(2.dp, Color.Black)) {
-        for (i1 in 0..18 step 9) {
-            Row {
-                for (i2 in 0..2) {
-                    val index = startIndex + i1 + i2
-                    square(index, state)
+fun square(char: Char, onTyped: (Char) -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .border(1.dp, Color.Black)
+            .focusRequester(focusRequester)
+            .clickable { focusRequester.requestFocus() }
+            .onKeyEvent { event ->
+                if (event.nativeKeyEvent.id == KEY_PRESSED && event.nativeKeyEvent.keyChar in '1'..'9'
+                ) {
+                    onTyped(event.nativeKeyEvent.keyChar)
+                    return@onKeyEvent true
+                } else {
+                    return@onKeyEvent false
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun square(index: Int, state: String) {
-    Box(modifier = Modifier.width(40.dp).height(40.dp).border(0.5.dp, Color.Black)) {
-//        Text(index.toString(), Modifier.align(Alignment.Center))
-        val c = state[index]
-        if (c in '1'..'9') {
-            Text(c.toString(), Modifier.align(Alignment.Center))
+    ) {
+        if (char in '1'..'9') {
+            Text(
+                text = char.toString(),
+                modifier = Modifier.align(Alignment.Center),
+                fontSize = 30.sp
+            )
         }
     }
 }
