@@ -6,6 +6,8 @@ object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
 class Square(val row: Int, val col: Int) {
+    val block: Int = row / 3 * 3 + col / 3
+
     var value: Char? = null
         private set
     val candidates = mutableSetOf('1', '2', '3', '4', '5', '6', '7', '8', '9')
@@ -23,14 +25,10 @@ class Square(val row: Int, val col: Int) {
 }
 
 class Solver {
-    private val squares = Array(81) { i -> Square(i / 9, i % 9) }
-
-    private val rows = List<Iterable<Square>>(9) { r -> ((r * 9)..(r * 9 + 8)).map { squares[it] } }
-    private val cols = List<Iterable<Square>>(9) { c -> (c..(c + 72) step 9).map { squares[it] } }
-    private val blocks = listOf(0, 3, 6, 27, 30, 33, 54, 57, 60).map { i ->
-        listOf(0, 1, 2, 9, 10, 11, 18, 19, 20).map { o -> i + o }
-            .map { squares[it] }
-    }
+    private val squares = List(81) { i -> Square(i / 9, i % 9) }
+    private val rows = List(9) { row -> squares.filter { s -> s.row == row } }
+    private val cols = List(9) { col -> squares.filter { s -> s.col == col } }
+    private val blocks = List(9) { block -> squares.filter { s -> s.block == block } }
 
     fun solve(input: String): Solution {
         setInput(input)
@@ -130,20 +128,7 @@ class Solver {
     }
 
     private fun affectedBy(s: Square): Sequence<Square> {
-        return rowOf(s).asSequence() + colOf(s).asSequence() + blockOf(s).asSequence()
+        return rows[s.row].asSequence() + cols[s.col].asSequence() + blocks[s.block].asSequence()
     }
 
-    private fun rowOf(s: Square): Iterable<Square> {
-        return rows[s.row]
-    }
-
-    private fun colOf(s: Square): Iterable<Square> {
-        return cols[s.col]
-    }
-
-    private fun blockOf(s: Square): Iterable<Square> {
-        val blockRow = s.row / 3
-        val blockCol = s.col / 3
-        return blocks[blockRow * 3 + blockCol]
-    }
 }
