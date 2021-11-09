@@ -69,6 +69,12 @@ class SolverTest {
     }
 
     @Test
+    fun unsolvableSquare() {
+        val input = "..9.287..8.6..4..5..3.....46.........2.71345.........23.....5..9..4..8.7..125.3.."
+        testInvalidPuzzle(input)
+    }
+
+    @Test
     fun hardestPuzzle() {
         val input = "........8..3...4...9..2..6.....79.......612...6.5.2.7...8...5...1.....2.4.5.....3"
         testTooHardPuzzle(input)

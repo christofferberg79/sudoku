@@ -37,6 +37,9 @@ class Solver {
         if (duplicateGivens()) {
             return false
         }
+        if (noCandidate()) {
+            return false
+        }
         return true
     }
 
@@ -48,6 +51,10 @@ class Solver {
     }
 
     private fun insufficientGivens() = d.count { c -> c in '1'..'9' } < 17
+
+    private fun noCandidate() = (0..80).any { i ->
+        d[i] !in '1'..'9' && candidates[i].isEmpty()
+    }
 
     private fun setInput(input: String) = input.forEachIndexed { i, c -> set(i, c) }
 
