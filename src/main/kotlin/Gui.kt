@@ -1,8 +1,11 @@
 package cberg.sudoku
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +14,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
@@ -21,7 +25,10 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        game("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
+        game(
+            "..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..",
+            GameDimensions(square = 36.dp, thinLine = 1.dp, thickLine = 2.dp)
+        )
     }
 }
 
@@ -43,34 +50,39 @@ class GameState(val squares: List<Square>) {
     }
 }
 
+class GameDimensions(private val square: Dp, private val thinLine: Dp, private val thickLine: Dp) {
+    fun gameSize() = thickLine * 4 + thinLine * 6 + square * 9
+    fun squareOffset(i: Int) = thickLine + (square + thinLine) * i + (thickLine - thinLine) * (i / 3)
+    fun squareSize() = square
+}
+
 @Composable
-private fun game(initialState: String) {
+private fun game(initialState: String, dimensions: GameDimensions) {
     var state by remember { mutableStateOf(GameState(initialState)) }
 
-    Column {
+    Box(modifier = Modifier.size(dimensions.gameSize()).background(Color.Black)) {
         for (row in 0..8) {
-            Row {
-                for (col in 0..8) {
-                    val i = row * 9 + col
-                    square(
-                        square = state.squares[i],
-                        onTyped = { char ->
-                            state = state.update(i, char)
-                        }
-                    )
-                }
+            for (col in 0..8) {
+                val i = row * 9 + col
+                square(
+                    modifier = Modifier.size(dimensions.squareSize())
+                        .offset(dimensions.squareOffset(col), dimensions.squareOffset(row)),
+                    square = state.squares[i],
+                    onTyped = { char ->
+                        state = state.update(i, char)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun square(square: GameState.Square, onTyped: (Char) -> Unit) {
+fun square(modifier: Modifier, square: GameState.Square, onTyped: (Char) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Box(
-        modifier = Modifier
-            .size(40.dp)
-            .border(1.dp, Color.Black)
+        modifier = modifier
+            .background(Color.White)
             .run {
                 if (square.given) {
                     this
