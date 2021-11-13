@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,9 @@ class GameState(val squares: List<Square>) {
     data class Square(val value: Char?, val given: Boolean)
 
     fun update(i: Int, char: Char?): GameState {
+        if (squares[i].value == char) {
+            return this
+        }
         val newSquare = squares[i].copy(value = char)
         val newSquares = squares.subList(0, i) + newSquare + squares.subList(i + 1, squares.size)
         return GameState(newSquares)
@@ -68,17 +74,17 @@ private fun game(initialState: String, dimensions: GameDimensions) {
                     modifier = Modifier.size(dimensions.squareSize())
                         .offset(dimensions.squareOffset(col), dimensions.squareOffset(row)),
                     square = state.squares[i],
-                    onTyped = { char ->
-                        state = state.update(i, char)
-                    }
+                    onType = { char -> state = state.update(i, char) },
+                    onDelete = { state = state.update(i, null) }
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun square(modifier: Modifier, square: GameState.Square, onTyped: (Char) -> Unit) {
+fun square(modifier: Modifier, square: GameState.Square, onType: (Char) -> Unit, onDelete: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier = modifier
@@ -91,15 +97,19 @@ fun square(modifier: Modifier, square: GameState.Square, onTyped: (Char) -> Unit
                         .focusRequester(focusRequester)
                         .clickable { focusRequester.requestFocus() }
                         .onKeyEvent { event ->
-                            if (event.nativeKeyEvent.id == KEY_PRESSED &&
-                                event.nativeKeyEvent.keyChar in '1'..'9' &&
-                                event.nativeKeyEvent.keyChar != square.value
-                            ) {
-                                onTyped(event.nativeKeyEvent.keyChar)
-                                return@onKeyEvent true
-                            } else {
+                            if (event.nativeKeyEvent.id != KEY_PRESSED) {
                                 return@onKeyEvent false
                             }
+                            if (event.key == Key.Delete || event.key == Key.Backspace) {
+                                onDelete()
+                                return@onKeyEvent true
+                            }
+                            val char = event.nativeKeyEvent.keyChar
+                            if (char in '1'..'9') {
+                                onType(char)
+                                return@onKeyEvent true
+                            }
+                            return@onKeyEvent false
                         }
                 }
             }
