@@ -21,15 +21,14 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        game()
+        game("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
     }
 }
 
 @Composable
-private fun game() {
-    var state by remember {
-        mutableStateOf("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
-    }
+private fun game(initialState: String) {
+    var state by remember { mutableStateOf(initialState) }
+    val given = remember { initialState.map { c -> c in '1'..'9' } }
 
     Column {
         for (row in 0..8) {
@@ -38,6 +37,7 @@ private fun game() {
                     val i = row * 9 + col
                     square(
                         char = state[i],
+                        given = given[i],
                         onTyped = { char ->
                             state = state.substring(0, i) + char + state.substring(i + 1)
                         }
@@ -49,29 +49,36 @@ private fun game() {
 }
 
 @Composable
-fun square(char: Char, onTyped: (Char) -> Unit) {
+fun square(char: Char, given: Boolean, onTyped: (Char) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier = Modifier
             .size(40.dp)
             .border(1.dp, Color.Black)
-            .focusRequester(focusRequester)
-            .clickable { focusRequester.requestFocus() }
-            .onKeyEvent { event ->
-                if (event.nativeKeyEvent.id == KEY_PRESSED && event.nativeKeyEvent.keyChar in '1'..'9'
-                ) {
-                    onTyped(event.nativeKeyEvent.keyChar)
-                    return@onKeyEvent true
-                } else {
-                    return@onKeyEvent false
-                }
+            .run { if (given) {
+                this
+            } else {
+                this
+                    .focusRequester(focusRequester)
+                    .clickable { focusRequester.requestFocus() }
+                    .onKeyEvent { event ->
+                        if (event.nativeKeyEvent.id == KEY_PRESSED && event.nativeKeyEvent.keyChar in '1'..'9'
+                        ) {
+                            onTyped(event.nativeKeyEvent.keyChar)
+                            return@onKeyEvent true
+                        } else {
+                            return@onKeyEvent false
+                        }
+                    }
+            }
             }
     ) {
         if (char in '1'..'9') {
             Text(
                 text = char.toString(),
                 modifier = Modifier.align(Alignment.Center),
-                fontSize = 30.sp
+                fontSize = 30.sp,
+                color = if (given) Color.Black else Color.Blue
             )
         }
     }
