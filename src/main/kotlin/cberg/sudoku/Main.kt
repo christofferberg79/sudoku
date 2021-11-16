@@ -1,5 +1,11 @@
 package cberg.sudoku
 
+import cberg.sudoku.gui.gui
+import cberg.sudoku.solver.InvalidPuzzle
+import cberg.sudoku.solver.Solver
+import cberg.sudoku.solver.TooHard
+import cberg.sudoku.solver.UniqueSolution
+
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
         return gui()

@@ -1,4 +1,4 @@
-package cberg.sudoku
+package cberg.sudoku.gui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

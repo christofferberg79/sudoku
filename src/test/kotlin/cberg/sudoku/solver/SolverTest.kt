@@ -1,4 +1,4 @@
-package cberg.sudoku
+package cberg.sudoku.solver
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

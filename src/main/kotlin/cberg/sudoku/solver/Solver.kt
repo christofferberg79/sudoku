@@ -1,4 +1,4 @@
-package cberg.sudoku
+package cberg.sudoku.solver
 
 sealed class Solution
 class UniqueSolution(val solution: String) : Solution()
