@@ -10,12 +10,12 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.Dp
@@ -64,9 +64,13 @@ private fun game(initialState: String, dimensions: GameDimensions) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun square(modifier: Modifier, square: Square, onType: (Char) -> Unit, onDelete: () -> Unit) {
+fun square(
+    modifier: Modifier,
+    square: Square,
+    onType: (Char) -> Unit,
+    onDelete: () -> Unit
+) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier = modifier
@@ -75,23 +79,15 @@ fun square(modifier: Modifier, square: Square, onType: (Char) -> Unit, onDelete:
                 if (square.given) {
                     this
                 } else {
-                    this
-                        .focusRequester(focusRequester)
+                    this.focusRequester(focusRequester)
                         .clickable { focusRequester.requestFocus() }
                         .onKeyEvent { event ->
-                            if (event.nativeKeyEvent.id != KEY_PRESSED) {
-                                return@onKeyEvent false
+                            when (val input = event.toSquareInput()) {
+                                is SquareInput.Value -> onType(input.value)
+                                is SquareInput.Delete -> onDelete()
+                                else -> return@onKeyEvent false
                             }
-                            if (event.key == Key.Delete || event.key == Key.Backspace) {
-                                onDelete()
-                                return@onKeyEvent true
-                            }
-                            val char = event.nativeKeyEvent.keyChar
-                            if (char in '1'..'9') {
-                                onType(char)
-                                return@onKeyEvent true
-                            }
-                            return@onKeyEvent false
+                            return@onKeyEvent true
                         }
                 }
             }
@@ -105,4 +101,23 @@ fun square(modifier: Modifier, square: Square, onType: (Char) -> Unit, onDelete:
             )
         }
     }
+}
+
+private sealed class SquareInput {
+    object Delete : SquareInput()
+    data class Value(val value: Char) : SquareInput()
+}
+
+private fun KeyEvent.toSquareInput(): SquareInput? {
+    if (nativeKeyEvent.id != KEY_PRESSED) {
+        return null
+    }
+    if (key == Key.Delete || key == Key.Backspace) {
+        return SquareInput.Delete
+    }
+    val char = nativeKeyEvent.keyChar
+    if (char in '1'..'9') {
+        return SquareInput.Value(char)
+    }
+    return null
 }
