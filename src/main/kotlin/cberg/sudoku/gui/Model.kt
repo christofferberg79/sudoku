@@ -15,7 +15,8 @@ class Model(input: String) {
 
     data class Square(
         val value: Char?,
-        val given: Boolean
+        val given: Boolean,
+        val marks: Set<Char> = if (value == null) ('1'..'9').toSet() else emptySet()
     )
 
     private fun initialState(input: String) = State(List(81) { i ->
@@ -31,17 +32,24 @@ class Model(input: String) {
     }
 
     fun writeChar(i: Int, char: Char) = setState {
-        updateSquare(i) { it.copy(value = char) }
+        updateSquare(i) { copy(value = char) }
     }
 
     fun deleteChar(i: Int) = setState {
-        updateSquare(i) { it.copy(value = null) }
+        updateSquare(i) { copy(value = null) }
     }
 
-    private fun State.updateSquare(i: Int, transform: (Square) -> Square) =
-        copy(squares = squares.update(i, transform))
+    fun toggleMark(i: Int, char: Char) = setState {
+        updateSquare(i) { copy(marks = toggleMark(char, marks)) }
+    }
 
-    private fun <E> List<E>.update(i: Int, transform: (E) -> E): List<E> {
-        return mapIndexed { index, square -> if (index == i) transform(square) else square }
+    private fun toggleMark(char: Char, marks: Set<Char>) =
+        if (char in marks) marks - char else marks + char
+
+    private fun State.updateSquare(i: Int, transform: Square.() -> Square) =
+        copy(squares = squares.updateByIndex(i, transform))
+
+    private fun <E> List<E>.updateByIndex(index: Int, transform: (E) -> E): List<E> {
+        return mapIndexed { otherIndex, item -> if (otherIndex == index) transform(item) else item }
     }
 }
