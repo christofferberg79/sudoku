@@ -10,13 +10,14 @@ class Model(input: String) {
         private set
 
     data class State(
-        val squares: List<Square>
+        val squares: List<Square>,
+        val pencil: Boolean = false
     )
 
     data class Square(
         val value: Char?,
         val given: Boolean,
-        val marks: Set<Char> = if (value == null) ('1'..'9').toSet() else emptySet()
+        val marks: Set<Char> = emptySet()
     )
 
     private fun initialState(input: String) = State(List(81) { i ->
@@ -32,15 +33,26 @@ class Model(input: String) {
     }
 
     fun writeChar(i: Int, char: Char) = setState {
-        updateSquare(i) { copy(value = char) }
+        when {
+            squares[i].given -> this
+            squares[i].value == char -> this
+            !pencil -> updateSquare(i) { copy(value = char) }
+            squares[i].value == null -> updateSquare(i) { copy(marks = toggleMark(char, marks)) }
+            else -> this
+        }
     }
 
     fun deleteChar(i: Int) = setState {
-        updateSquare(i) { copy(value = null) }
+        when {
+            squares[i].given -> this
+            squares[i].value == null -> this
+            !pencil -> updateSquare(i) { copy(value = null) }
+            else -> this
+        }
     }
 
-    fun toggleMark(i: Int, char: Char) = setState {
-        updateSquare(i) { copy(marks = toggleMark(char, marks)) }
+    fun togglePencil() = setState {
+        copy(pencil = !pencil)
     }
 
     private fun toggleMark(char: Char, marks: Set<Char>) =

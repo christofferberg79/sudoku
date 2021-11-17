@@ -3,6 +3,7 @@ package cberg.sudoku.gui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -46,16 +47,24 @@ private fun game(initialState: String) {
 
     val dim = GameDimensions(square = 36.dp, thinLine = 1.dp, thickLine = 2.dp)
 
-    Box(modifier = dim.gameModifier().background(Color.Black)) {
-        for (row in 0..8) {
-            for (col in 0..8) {
-                val i = row * 9 + col
-                square(
-                    modifier = dim.squareModifier(col, row).background(Color.White),
-                    square = state.squares[i],
-                    onType = { char -> model.writeChar(i, char) },
-                    onDelete = { model.deleteChar(i) }
-                )
+    Row {
+        Box(modifier = dim.gameModifier().background(Color.Black)) {
+            for (row in 0..8) {
+                for (col in 0..8) {
+                    val i = row * 9 + col
+                    square(
+                        modifier = dim.squareModifier(col, row).background(Color.White),
+                        square = state.squares[i],
+                        onType = { char -> model.writeChar(i, char) },
+                        onDelete = { model.deleteChar(i) }
+                    )
+                }
+            }
+        }
+        Column(Modifier.padding(10.dp)) {
+            Row {
+                Text(text = "Pencil:", modifier = Modifier.align(Alignment.CenterVertically))
+                Switch(checked = state.pencil, onCheckedChange = { model.togglePencil() })
             }
         }
     }
@@ -70,18 +79,17 @@ fun square(
 ) {
     val focusRequester = remember { FocusRequester() }
     Box(
-        modifier = modifier.mapIf(!square.given) {
-            it.focusRequester(focusRequester)
-                .clickable { focusRequester.requestFocus() }
-                .onKeyEvent { event ->
-                    when (val input = event.toSquareInput()) {
-                        is SquareInput.Value -> onType(input.value)
-                        is SquareInput.Delete -> onDelete()
-                        else -> return@onKeyEvent false
-                    }
-                    return@onKeyEvent true
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .clickable { focusRequester.requestFocus() }
+            .onKeyEvent { event ->
+                when (val input = event.toSquareInput()) {
+                    is SquareInput.Value -> onType(input.value)
+                    is SquareInput.Delete -> onDelete()
+                    else -> return@onKeyEvent false
                 }
-        }
+                return@onKeyEvent true
+            }
     ) {
         if (square.value == null) {
             squareMarks(square)
@@ -90,9 +98,6 @@ fun square(
         }
     }
 }
-
-private inline fun <T> T.mapIf(condition: Boolean, transform: (T) -> T) =
-    if (condition) transform(this) else this
 
 @Composable
 private fun squareMarks(square: Square) {
