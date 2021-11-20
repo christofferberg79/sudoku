@@ -56,7 +56,7 @@ class Solver {
 
     private fun insufficientGivens() = squares.count(Square::isSet) < 17
 
-    private fun duplicateGivens() = groups().any { group ->
+    private fun duplicateGivens() = groups.any { group ->
         group.filter(Square::isSet)
             .groupingBy(Square::value)
             .eachCount()
@@ -68,7 +68,7 @@ class Solver {
     }
 
     private fun missingCandidate() = symbols.any { symbol ->
-        groups().any { group ->
+        groups.any { group ->
             group.none { square -> symbol == square.value || symbol in square.candidates }
         }
     }
@@ -103,7 +103,7 @@ class Solver {
     }
 
     private fun hiddenSingles(): Boolean {
-        for (group in groups()) {
+        for (group in groups) {
             for (symbol in symbols) {
                 group.singleOrNull { square -> symbol in square.candidates }
                     ?.let { square ->
@@ -115,9 +115,7 @@ class Solver {
         return false
     }
 
-    private fun groups(): Sequence<Iterable<Square>> {
-        return rows.asSequence() + cols.asSequence() + blocks.asSequence()
-    }
+    private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
 
     private fun affectedBy(s: Square): Sequence<Square> {
         return rows[s.row].asSequence() + cols[s.col].asSequence() + blocks[s.block].asSequence()
