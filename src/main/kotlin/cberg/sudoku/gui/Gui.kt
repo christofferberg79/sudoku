@@ -62,6 +62,14 @@ private fun game(initialState: String) {
             }
         }
         Column(Modifier.padding(10.dp)) {
+            Text(
+                text = when (state.status) {
+                    GameStatus.NotDone -> "Not Done"
+                    GameStatus.IncorrectSolution -> "Incorrect"
+                    GameStatus.CorrectSolution -> "Correct"
+                }
+            )
+
             Row {
                 Text(text = "Pencil:", modifier = Modifier.align(Alignment.CenterVertically))
                 Switch(checked = state.pencil, onCheckedChange = { model.togglePencil() })

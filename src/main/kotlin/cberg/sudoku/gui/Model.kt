@@ -65,3 +65,38 @@ class Model(input: String) {
         return mapIndexed { otherIndex, item -> if (otherIndex == index) transform(item) else item }
     }
 }
+
+sealed class GameStatus {
+    object NotDone : GameStatus()
+    object CorrectSolution : GameStatus()
+    object IncorrectSolution : GameStatus()
+}
+
+val Model.State.status: GameStatus
+    get() = when {
+        squares.any { it.value == null } -> GameStatus.NotDone
+        isCorrect() -> GameStatus.CorrectSolution
+        else -> GameStatus.IncorrectSolution
+    }
+
+fun Model.State.isCorrect(): Boolean {
+    return groups.all { group ->
+        group.map { position -> squares[position.index].value }.containsAll(('1'..'9').toList())
+    }
+}
+
+class Position(val row: Int, val col: Int) {
+    init {
+        require(row in 0..8)
+        require(col in 0..8)
+    }
+
+    val block = row / 3 * 3 + col / 3
+    val index = row * 9 + col
+}
+
+private val positions = List(81) { i -> Position(i / 9, i % 9) }
+private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
+private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
+private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
+private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
