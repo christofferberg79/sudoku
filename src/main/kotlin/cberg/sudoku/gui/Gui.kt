@@ -76,6 +76,11 @@ private fun game(initialState: String) {
                 Switch(checked = state.pencil, onCheckedChange = { model.togglePencil() })
             }
 
+            Row {
+                Text(text = "Auto-erase pencil marks:", modifier = Modifier.align(Alignment.CenterVertically))
+                Switch(checked = state.autoErasePencilMarks, onCheckedChange = { model.toggleAutoErasePencilMarks() })
+            }
+
             Button(onClick = model::writePencilMarks) {
                 Text("Write pencil marks")
             }

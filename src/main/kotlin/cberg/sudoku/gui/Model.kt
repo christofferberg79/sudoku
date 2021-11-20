@@ -11,7 +11,8 @@ class Model(input: String) {
 
     data class State(
         val squares: List<Square>,
-        val pencil: Boolean = false
+        val pencil: Boolean = false,
+        val autoErasePencilMarks: Boolean = true
     )
 
     data class Square(
@@ -37,9 +38,25 @@ class Model(input: String) {
         when {
             squares[i].given -> this
             squares[i].value == char -> this
-            !pencil -> updateSquare(i) { copy(value = char) }
+            !pencil -> writeChar(i, char)
             squares[i].value == null -> updateSquare(i) { copy(marks = toggleMark(char, marks)) }
             else -> this
+        }
+    }
+
+    private fun State.writeChar(i: Int, char: Char): State {
+        return if (autoErasePencilMarks) {
+            val square = squares[i]
+            val affected = groupsOf(square.position).map { p -> p.index }.toSet()
+            copy(squares = squares.mapIndexed { otherIndex, otherSquare ->
+                when (otherIndex) {
+                    i -> otherSquare.copy(value = char)
+                    in affected -> otherSquare.copy(marks = otherSquare.marks - char)
+                    else -> otherSquare
+                }
+            })
+        } else {
+            updateSquare(i) { copy(value = char) }
         }
     }
 
@@ -54,6 +71,10 @@ class Model(input: String) {
 
     fun togglePencil() = setState {
         copy(pencil = !pencil)
+    }
+
+    fun toggleAutoErasePencilMarks() = setState {
+        copy(autoErasePencilMarks = !autoErasePencilMarks)
     }
 
     fun writePencilMarks() = setState {
