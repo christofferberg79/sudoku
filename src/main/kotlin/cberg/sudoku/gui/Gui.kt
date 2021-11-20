@@ -3,6 +3,7 @@ package cberg.sudoku.gui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.Button
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -73,6 +74,10 @@ private fun game(initialState: String) {
             Row {
                 Text(text = "Pencil:", modifier = Modifier.align(Alignment.CenterVertically))
                 Switch(checked = state.pencil, onCheckedChange = { model.togglePencil() })
+            }
+
+            Button(onClick = model::writePencilMarks) {
+                Text("Write pencil marks")
             }
         }
     }

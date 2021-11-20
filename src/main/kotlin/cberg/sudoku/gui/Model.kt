@@ -15,6 +15,7 @@ class Model(input: String) {
     )
 
     data class Square(
+        val position: Position,
         val value: Char?,
         val given: Boolean,
         val marks: Set<Char> = emptySet()
@@ -25,7 +26,7 @@ class Model(input: String) {
         require(input.all { c -> c == '.' || c in '1'..'9' })
         val given = input[i] in '1'..'9'
         val value = if (given) input[i] else null
-        Square(value, given)
+        Square(positions[i], value, given)
     })
 
     private inline fun setState(update: State.() -> State) {
@@ -53,6 +54,19 @@ class Model(input: String) {
 
     fun togglePencil() = setState {
         copy(pencil = !pencil)
+    }
+
+    fun writePencilMarks() = setState {
+        copy(squares = squares.map { square ->
+            square.copy(
+                marks = if (square.value != null) {
+                    emptySet()
+                } else {
+                    val values = groupsOf(square.position).mapNotNull { p -> squares[p.index].value }.toSet()
+                    ('1'..'9').filter { it !in values }.toSet()
+                }
+            )
+        })
     }
 
     private fun toggleMark(char: Char, marks: Set<Char>) =
@@ -100,3 +114,6 @@ private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
 private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
 private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
 private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
+private fun groupsOf(position: Position): Sequence<Position> {
+    return rows[position.row].asSequence() + cols[position.col].asSequence() + blocks[position.block].asSequence()
+}
