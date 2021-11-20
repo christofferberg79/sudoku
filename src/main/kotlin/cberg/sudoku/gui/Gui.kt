@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package cberg.sudoku.gui
 
 import androidx.compose.foundation.background
@@ -9,6 +11,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -38,7 +41,9 @@ class GameDimensions(private val square: Dp, private val thinLine: Dp, private v
     private fun squareOffset(i: Int) = thickLine + (square + thinLine) * i + (thickLine - thinLine) * (i / 3)
 
     fun gameModifier() = Modifier.size(gameSize())
-    fun squareModifier(col: Int, row: Int) = Modifier.size(square).offset(squareOffset(col), squareOffset(row))
+    fun squareModifier(position: Position) = Modifier
+        .size(square)
+        .offset(squareOffset(position.col), squareOffset(position.row))
 }
 
 @Composable
@@ -50,16 +55,13 @@ private fun game(initialState: String) {
 
     Row {
         Box(modifier = dim.gameModifier().background(Color.Black)) {
-            for (row in 0..8) {
-                for (col in 0..8) {
-                    val i = row * 9 + col
-                    square(
-                        modifier = dim.squareModifier(col, row).background(Color.White),
-                        square = state.squares[i],
-                        onType = { char -> model.writeChar(i, char) },
-                        onDelete = { model.deleteChar(i) }
-                    )
-                }
+            state.squares.forEachIndexed { index, square ->
+                square(
+                    modifier = dim.squareModifier(square.position).background(Color.White),
+                    square = square,
+                    onType = { char -> model.writeChar(index, char) },
+                    onDelete = { model.deleteChar(index) }
+                )
             }
         }
         Column(Modifier.padding(10.dp)) {

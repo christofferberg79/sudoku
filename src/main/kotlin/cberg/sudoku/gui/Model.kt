@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 class Model(input: String) {
-
     var state by mutableStateOf(initialState(input))
         private set
 
@@ -22,49 +21,54 @@ class Model(input: String) {
         val marks: Set<Char> = emptySet()
     )
 
-    private fun initialState(input: String) = State(List(81) { i ->
+    private fun initialState(input: String): State {
         require(input.length == 81)
         require(input.all { c -> c == '.' || c in '1'..'9' })
-        val given = input[i] in '1'..'9'
-        val value = if (given) input[i] else null
-        Square(positions[i], value, given)
-    })
+
+        val squares = input.mapIndexed { index, char ->
+            val given = char in '1'..'9'
+            val value = if (given) char else null
+            Square(positions[index], value, given)
+        }
+        return State(squares)
+    }
+
+    fun writeChar(index: Int, char: Char) = setState {
+        when {
+            squares[index].given -> this
+            squares[index].value == char -> this
+            !pencil -> writeChar(index, char)
+            squares[index].value == null -> toggleMark(index, char)
+            else -> this
+        }
+    }
 
     private inline fun setState(update: State.() -> State) {
         state = state.update()
     }
 
-    fun writeChar(i: Int, char: Char) = setState {
-        when {
-            squares[i].given -> this
-            squares[i].value == char -> this
-            !pencil -> writeChar(i, char)
-            squares[i].value == null -> updateSquare(i) { copy(marks = toggleMark(char, marks)) }
-            else -> this
-        }
+    private fun State.toggleMark(index: Int, char: Char) = updateSquare(index) {
+        copy(marks = if (char in marks) marks - char else marks + char)
     }
 
-    private fun State.writeChar(i: Int, char: Char): State {
-        return if (autoErasePencilMarks) {
-            val square = squares[i]
-            val affected = groupsOf(square.position).map { p -> p.index }.toSet()
-            copy(squares = squares.mapIndexed { otherIndex, otherSquare ->
-                when (otherIndex) {
-                    i -> otherSquare.copy(value = char)
-                    in affected -> otherSquare.copy(marks = otherSquare.marks - char)
-                    else -> otherSquare
-                }
-            })
-        } else {
-            updateSquare(i) { copy(value = char) }
+    private fun State.writeChar(index: Int, char: Char): State {
+        var newState = updateSquare(index) { copy(value = char) }
+        if (autoErasePencilMarks) {
+            newState = newState.eraseMarks(index, char)
         }
+        return newState
     }
 
-    fun deleteChar(i: Int) = setState {
+    private fun State.eraseMarks(index: Int, char: Char): State {
+        val affected = affectedBy(positions[index]).map { it.index }.toSet()
+        return updateSquares(affected) { copy(marks = marks - char) }
+    }
+
+    fun deleteChar(index: Int) = setState {
         when {
-            squares[i].given -> this
-            squares[i].value == null -> this
-            !pencil -> updateSquare(i) { copy(value = null) }
+            squares[index].given -> this
+            squares[index].value == null -> this
+            !pencil -> updateSquare(index) { copy(value = null) }
             else -> this
         }
     }
@@ -83,22 +87,23 @@ class Model(input: String) {
                 marks = if (square.value != null) {
                     emptySet()
                 } else {
-                    val values = groupsOf(square.position).mapNotNull { p -> squares[p.index].value }.toSet()
+                    val values = affectedBy(square.position).mapNotNull { p -> squares[p.index].value }.toSet()
                     ('1'..'9').filter { it !in values }.toSet()
                 }
             )
         })
     }
 
-    private fun toggleMark(char: Char, marks: Set<Char>) =
-        if (char in marks) marks - char else marks + char
+    private fun State.updateSquare(index: Int, transform: Square.() -> Square) =
+        copy(squares = squares.mapIndexed { otherIndex, item ->
+            if (otherIndex == index) transform(item) else item
+        })
 
-    private fun State.updateSquare(i: Int, transform: Square.() -> Square) =
-        copy(squares = squares.updateByIndex(i, transform))
+    private fun State.updateSquares(indices: Iterable<Int>, transform: Square.() -> Square) =
+        copy(squares = squares.mapIndexed { otherIndex, item ->
+            if (otherIndex in indices) transform(item) else item
+        })
 
-    private fun <E> List<E>.updateByIndex(index: Int, transform: (E) -> E): List<E> {
-        return mapIndexed { otherIndex, item -> if (otherIndex == index) transform(item) else item }
-    }
 }
 
 sealed class GameStatus {
@@ -135,6 +140,6 @@ private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
 private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
 private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
 private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
-private fun groupsOf(position: Position): Sequence<Position> {
+private fun affectedBy(position: Position): Sequence<Position> {
     return rows[position.row].asSequence() + cols[position.col].asSequence() + blocks[position.block].asSequence()
 }
