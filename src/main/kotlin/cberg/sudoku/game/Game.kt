@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalStdlibApi::class)
+
 package cberg.sudoku.game
 
 data class Square(
@@ -9,55 +11,59 @@ data class Square(
 
 data class Game(
     val squares: List<Square>
-)
-
-class Position(val row: Int, val col: Int) {
-    init {
-        require(row in 0..8)
-        require(col in 0..8)
-    }
-
-    val block = row / 3 * 3 + col / 3
-    val index = row * 9 + col
+) {
+    operator fun List<Square>.get(position: Position) = squares[position.index]
 }
 
-fun initialGame(input: String): Game {
+fun Game(input: String): Game {
     require(input.length == 81)
     require(input.all { c -> c == '.' || c in '1'..'9' })
 
     val squares = input.mapIndexed { index, char ->
         val given = char in '1'..'9'
         val value = if (given) char else null
-        Square(positions[index], value, given)
+        Square(Position(index), value, given)
     }
     return Game(squares)
 }
 
-fun Game.setValue(index: Int, char: Char) = updateSquare(index) {
+data class Position(val row: Int, val col: Int) {
+    init {
+        require(row in 0..8)
+        require(col in 0..8)
+    }
+
+    val block = row / 3 * 3 + col / 3
+}
+
+private val Position.index get() = row * 9 + col
+private fun Position(index: Int) = positions[index]
+
+fun Game.setValue(position: Position, char: Char) = updateSquare(position) {
     copy(value = char, marks = emptySet())
 }
 
-fun Game.eraseValue(index: Int) = updateSquare(index) {
+fun Game.eraseValue(position: Position) = updateSquare(position) {
     copy(value = null)
 }
 
-fun Game.toggleMark(index: Int, char: Char) = updateSquare(index) {
+fun Game.toggleMark(position: Position, char: Char) = updateSquare(position) {
     copy(marks = if (char in marks) marks - char else marks + char)
 }
 
-fun Game.eraseMarks(index: Int, char: Char): Game {
-    val affected = affectedBy(positions[index]).map { it.index }.toSet()
+fun Game.eraseMarks(position: Position, char: Char): Game {
+    val affected = affectedBy(position)
     return updateSquares(affected) { copy(marks = marks - char) }
 }
 
-private fun Game.updateSquare(index: Int, transform: Square.() -> Square) =
-    copy(squares = squares.mapIndexed { otherIndex, item ->
-        if (otherIndex == index) transform(item) else item
+private fun Game.updateSquare(position: Position, transform: Square.() -> Square) =
+    copy(squares = squares.map { square ->
+        if (square.position == position) transform(square) else square
     })
 
-private fun Game.updateSquares(indices: Iterable<Int>, transform: Square.() -> Square) =
-    copy(squares = squares.mapIndexed { otherIndex, item ->
-        if (otherIndex in indices) transform(item) else item
+private fun Game.updateSquares(positions: Set<Position>, transform: Square.() -> Square) =
+    copy(squares = squares.map { square ->
+        if (square.position in positions) transform(square) else square
     })
 
 fun Game.writePencilMarks() = copy(squares = squares.map { square ->
@@ -65,7 +71,7 @@ fun Game.writePencilMarks() = copy(squares = squares.map { square ->
         marks = if (square.value != null) {
             emptySet()
         } else {
-            val values = affectedBy(square.position).mapNotNull { p -> squares[p.index].value }.toSet()
+            val values = affectedBy(square.position).mapNotNull { p -> squares[p].value }.toSet()
             ('1'..'9').filter { it !in values }.toSet()
         }
     )
@@ -86,15 +92,18 @@ val Game.status: GameStatus
 
 private fun Game.isCorrect(): Boolean {
     return groups.all { group ->
-        group.map { position -> squares[position.index].value }.containsAll(('1'..'9').toList())
+        group.map { position -> squares[position].value }.containsAll(('1'..'9').toList())
     }
 }
+
 
 private val positions = List(81) { i -> Position(i / 9, i % 9) }
 private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
 private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
 private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
 private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
-private fun affectedBy(position: Position): Sequence<Position> {
-    return rows[position.row].asSequence() + cols[position.col].asSequence() + blocks[position.block].asSequence()
+private fun affectedBy(position: Position) = buildSet {
+    addAll(rows[position.row])
+    addAll(cols[position.col])
+    addAll(blocks[position.block])
 }

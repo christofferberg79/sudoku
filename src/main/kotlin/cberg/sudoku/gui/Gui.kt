@@ -59,12 +59,12 @@ private fun game(initialState: String) {
 
     Row {
         Box(modifier = dim.gameModifier().background(Color.Black)) {
-            game.squares.forEachIndexed { index, square ->
+            for (square in game.squares) {
                 square(
                     modifier = dim.squareModifier(square.position).background(Color.White),
                     square = square,
-                    onType = { char -> model.writeChar(index, char) },
-                    onDelete = { model.erase(index) }
+                    onType = { char -> model.writeChar(square.position, char) },
+                    onDelete = { model.erase(square.position) }
                 )
             }
         }
@@ -84,7 +84,9 @@ private fun game(initialState: String) {
 
             Row {
                 Text(text = "Auto-erase pencil marks:", modifier = Modifier.align(Alignment.CenterVertically))
-                Switch(checked = settings.autoErasePencilMarks, onCheckedChange = { model.toggleAutoErasePencilMarks() })
+                Switch(
+                    checked = settings.autoErasePencilMarks,
+                    onCheckedChange = { model.toggleAutoErasePencilMarks() })
             }
 
             Button(onClick = model::writePencilMarks) {

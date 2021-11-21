@@ -11,7 +11,7 @@ data class Settings(
 )
 
 class Model(input: String) {
-    var game by mutableStateOf(initialGame(input))
+    var game by mutableStateOf(Game(input))
         private set
 
     var settings by mutableStateOf(Settings())
@@ -25,21 +25,21 @@ class Model(input: String) {
         settings = settings.update()
     }
 
-    fun writeChar(index: Int, char: Char) = updateGame {
+    fun writeChar(position: Position, char: Char) = updateGame {
         if (settings.pencil) {
-            toggleMark(index, char)
+            toggleMark(position, char)
         } else {
             if (settings.autoErasePencilMarks) {
-                setValue(index, char).eraseMarks(index, char)
+                setValue(position, char).eraseMarks(position, char)
             } else {
-                setValue(index, char)
+                setValue(position, char)
             }
         }
     }
 
-    fun erase(index: Int) = updateGame {
+    fun erase(position: Position) = updateGame {
         if (!settings.pencil) {
-            eraseValue(index)
+            eraseValue(position)
         } else {
             this
         }
