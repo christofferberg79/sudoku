@@ -51,7 +51,7 @@ private fun game(initialState: String) {
     val game = model.game
     val settings = model.settings
 
-    val dim = GameDimensions(square = 36.dp, thinLine = 1.dp, thickLine = 2.dp)
+    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
 
     Row {
         Box(modifier = dim.gameModifier().background(Color.Black)) {
@@ -121,7 +121,7 @@ fun square(
 
 @Composable
 private fun squareMarks(square: Square) {
-    Column(Modifier.fillMaxSize().padding(2.dp)) {
+    Column(Modifier.fillMaxSize().padding(1.dp)) {
         for (row in 0..2) {
             Row(Modifier.fillMaxWidth().weight(1f)) {
                 for (col in 0..2) {
@@ -130,7 +130,7 @@ private fun squareMarks(square: Square) {
                         Text(
                             modifier = Modifier.align(Alignment.Center),
                             text = if (c in square.marks) "$c" else "",
-                            fontSize = 10.sp
+                            fontSize = 14.sp
                         )
                     }
                 }
@@ -145,7 +145,7 @@ private fun squareValue(square: Square) {
         Text(
             text = "${square.value}",
             modifier = Modifier.align(Alignment.Center),
-            fontSize = 30.sp,
+            fontSize = 40.sp,
             color = if (square.given) Color.Black else Color.Blue
         )
     }
