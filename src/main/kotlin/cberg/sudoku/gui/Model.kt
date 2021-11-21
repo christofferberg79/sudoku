@@ -4,24 +4,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
+data class Square(
+    val position: Position,
+    val value: Char?,
+    val given: Boolean,
+    val marks: Set<Char> = emptySet()
+)
+
+data class Game(
+    val squares: List<Square>
+)
+
+data class Settings(
+    val autoErasePencilMarks: Boolean = true,
+    val pencil: Boolean = false
+)
+
 class Model(input: String) {
-    var state by mutableStateOf(initialState(input))
+    var game by mutableStateOf(initialGame(input))
         private set
 
-    data class State(
-        val squares: List<Square>,
-        val pencil: Boolean = false,
-        val autoErasePencilMarks: Boolean = true
-    )
+    var settings by mutableStateOf(Settings())
+        private set
 
-    data class Square(
-        val position: Position,
-        val value: Char?,
-        val given: Boolean,
-        val marks: Set<Char> = emptySet()
-    )
-
-    private fun initialState(input: String): State {
+    private fun initialGame(input: String): Game {
         require(input.length == 81)
         require(input.all { c -> c == '.' || c in '1'..'9' })
 
@@ -30,58 +36,62 @@ class Model(input: String) {
             val value = if (given) char else null
             Square(positions[index], value, given)
         }
-        return State(squares)
+        return Game(squares)
     }
 
-    fun writeChar(index: Int, char: Char) = setState {
+    fun writeChar(index: Int, char: Char) = updateGame {
         when {
             squares[index].given -> this
             squares[index].value == char -> this
-            !pencil -> writeChar(index, char)
+            !settings.pencil -> writeChar(index, char)
             squares[index].value == null -> toggleMark(index, char)
             else -> this
         }
     }
 
-    private inline fun setState(update: State.() -> State) {
-        state = state.update()
+    private inline fun updateGame(update: Game.() -> Game) {
+        game = game.update()
     }
 
-    private fun State.toggleMark(index: Int, char: Char) = updateSquare(index) {
+    private inline fun updateSettings(update: Settings.() -> Settings) {
+        settings = settings.update()
+    }
+
+    private fun Game.toggleMark(index: Int, char: Char) = updateSquare(index) {
         copy(marks = if (char in marks) marks - char else marks + char)
     }
 
-    private fun State.writeChar(index: Int, char: Char): State {
-        var newState = updateSquare(index) { copy(value = char) }
-        if (autoErasePencilMarks) {
-            newState = newState.eraseMarks(index, char)
+    private fun Game.writeChar(index: Int, char: Char): Game {
+        var newGame = updateSquare(index) { copy(value = char) }
+        if (settings.autoErasePencilMarks) {
+            newGame = newGame.eraseMarks(index, char)
         }
-        return newState
+        return newGame
     }
 
-    private fun State.eraseMarks(index: Int, char: Char): State {
+    private fun Game.eraseMarks(index: Int, char: Char): Game {
         val affected = affectedBy(positions[index]).map { it.index }.toSet()
         return updateSquares(affected) { copy(marks = marks - char) }
     }
 
-    fun deleteChar(index: Int) = setState {
+    fun deleteChar(index: Int) = updateGame {
         when {
             squares[index].given -> this
             squares[index].value == null -> this
-            !pencil -> updateSquare(index) { copy(value = null) }
+            !settings.pencil -> updateSquare(index) { copy(value = null) }
             else -> this
         }
     }
 
-    fun togglePencil() = setState {
+    fun togglePencil() = updateSettings {
         copy(pencil = !pencil)
     }
 
-    fun toggleAutoErasePencilMarks() = setState {
+    fun toggleAutoErasePencilMarks() = updateSettings {
         copy(autoErasePencilMarks = !autoErasePencilMarks)
     }
 
-    fun writePencilMarks() = setState {
+    fun writePencilMarks() = updateGame {
         copy(squares = squares.map { square ->
             square.copy(
                 marks = if (square.value != null) {
@@ -94,12 +104,12 @@ class Model(input: String) {
         })
     }
 
-    private fun State.updateSquare(index: Int, transform: Square.() -> Square) =
+    private fun Game.updateSquare(index: Int, transform: Square.() -> Square) =
         copy(squares = squares.mapIndexed { otherIndex, item ->
             if (otherIndex == index) transform(item) else item
         })
 
-    private fun State.updateSquares(indices: Iterable<Int>, transform: Square.() -> Square) =
+    private fun Game.updateSquares(indices: Iterable<Int>, transform: Square.() -> Square) =
         copy(squares = squares.mapIndexed { otherIndex, item ->
             if (otherIndex in indices) transform(item) else item
         })
@@ -112,14 +122,14 @@ sealed class GameStatus {
     object IncorrectSolution : GameStatus()
 }
 
-val Model.State.status: GameStatus
+val Game.status: GameStatus
     get() = when {
         squares.any { it.value == null } -> GameStatus.NotDone
         isCorrect() -> GameStatus.CorrectSolution
         else -> GameStatus.IncorrectSolution
     }
 
-fun Model.State.isCorrect(): Boolean {
+fun Game.isCorrect(): Boolean {
     return groups.all { group ->
         group.map { position -> squares[position.index].value }.containsAll(('1'..'9').toList())
     }

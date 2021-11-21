@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
-import cberg.sudoku.gui.Model.Square
 import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -49,13 +48,14 @@ class GameDimensions(private val square: Dp, private val thinLine: Dp, private v
 @Composable
 private fun game(initialState: String) {
     val model = remember { Model(initialState) }
-    val state = model.state
+    val game = model.game
+    val settings = model.settings
 
     val dim = GameDimensions(square = 36.dp, thinLine = 1.dp, thickLine = 2.dp)
 
     Row {
         Box(modifier = dim.gameModifier().background(Color.Black)) {
-            state.squares.forEachIndexed { index, square ->
+            game.squares.forEachIndexed { index, square ->
                 square(
                     modifier = dim.squareModifier(square.position).background(Color.White),
                     square = square,
@@ -66,7 +66,7 @@ private fun game(initialState: String) {
         }
         Column(Modifier.padding(10.dp)) {
             Text(
-                text = when (state.status) {
+                text = when (game.status) {
                     GameStatus.NotDone -> "Not Done"
                     GameStatus.IncorrectSolution -> "Incorrect"
                     GameStatus.CorrectSolution -> "Correct"
@@ -75,12 +75,12 @@ private fun game(initialState: String) {
 
             Row {
                 Text(text = "Pencil:", modifier = Modifier.align(Alignment.CenterVertically))
-                Switch(checked = state.pencil, onCheckedChange = { model.togglePencil() })
+                Switch(checked = settings.pencil, onCheckedChange = { model.togglePencil() })
             }
 
             Row {
                 Text(text = "Auto-erase pencil marks:", modifier = Modifier.align(Alignment.CenterVertically))
-                Switch(checked = state.autoErasePencilMarks, onCheckedChange = { model.toggleAutoErasePencilMarks() })
+                Switch(checked = settings.autoErasePencilMarks, onCheckedChange = { model.toggleAutoErasePencilMarks() })
             }
 
             Button(onClick = model::writePencilMarks) {
