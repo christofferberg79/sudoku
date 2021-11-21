@@ -24,10 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
-import cberg.sudoku.game.GameStatus
-import cberg.sudoku.game.Position
-import cberg.sudoku.game.Square
-import cberg.sudoku.game.status
+import cberg.sudoku.game.*
 import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -35,7 +32,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        game("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
+        app("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
     }
 }
 
@@ -50,24 +47,15 @@ class GameDimensions(private val square: Dp, private val thinLine: Dp, private v
 }
 
 @Composable
-private fun game(initialState: String) {
+private fun app(initialState: String) {
     val model = remember { Model(initialState) }
     val game = model.game
     val settings = model.settings
 
-    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
 
     Row {
-        Box(modifier = dim.gameModifier().background(Color.Black)) {
-            for (square in game.squares) {
-                square(
-                    modifier = dim.squareModifier(square.position).background(Color.White),
-                    square = square,
-                    onType = { char -> model.writeChar(square.position, char) },
-                    onDelete = { model.erase(square.position) }
-                )
-            }
-        }
+        Game(game, model)
+
         Column(Modifier.padding(10.dp)) {
             Text(
                 text = when (game.status) {
@@ -77,17 +65,7 @@ private fun game(initialState: String) {
                 }
             )
 
-            Row {
-                Text(text = "Pencil:", modifier = Modifier.align(Alignment.CenterVertically))
-                Switch(checked = settings.pencil, onCheckedChange = { model.togglePencil() })
-            }
-
-            Row {
-                Text(text = "Auto-erase pencil marks:", modifier = Modifier.align(Alignment.CenterVertically))
-                Switch(
-                    checked = settings.autoErasePencilMarks,
-                    onCheckedChange = { model.toggleAutoErasePencilMarks() })
-            }
+            Settings(settings, model)
 
             Button(onClick = model::writePencilMarks) {
                 Text("Write pencil marks")
@@ -97,7 +75,45 @@ private fun game(initialState: String) {
 }
 
 @Composable
-fun square(
+private fun Game(game: Game, model: Model) {
+    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
+    Box(modifier = dim.gameModifier().background(Color.Black)) {
+        for (square in game.squares) {
+            Square(
+                modifier = dim.squareModifier(square.position).background(Color.White),
+                square = square,
+                onType = { char -> model.writeChar(square.position, char) },
+                onDelete = { model.erase(square.position) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun Settings(settings: Settings, model: Model) {
+    Setting(
+        text = "Pencil marks",
+        checked = settings.pencil,
+        onCheckedChange = { model.togglePencil() }
+    )
+
+    Setting(
+        text = "Auto-erase pencil marks",
+        checked = settings.autoErasePencilMarks,
+        onCheckedChange = { model.toggleAutoErasePencilMarks() }
+    )
+}
+
+@Composable
+private fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Text(text = text, modifier = Modifier.align(Alignment.CenterVertically))
+    }
+}
+
+@Composable
+fun Square(
     modifier: Modifier,
     square: Square,
     onType: (Char) -> Unit,
@@ -118,15 +134,15 @@ fun square(
             }
     ) {
         if (square.value == null) {
-            squareMarks(square)
+            SquareMarks(square)
         } else {
-            squareValue(square)
+            SquareValue(square)
         }
     }
 }
 
 @Composable
-private fun squareMarks(square: Square) {
+private fun SquareMarks(square: Square) {
     Column(Modifier.fillMaxSize().padding(1.dp)) {
         for (row in 0..2) {
             Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -146,7 +162,7 @@ private fun squareMarks(square: Square) {
 }
 
 @Composable
-private fun squareValue(square: Square) {
+private fun SquareValue(square: Square) {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "${square.value}",
