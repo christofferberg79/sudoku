@@ -24,6 +24,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
+import cberg.sudoku.game.GameStatus
+import cberg.sudoku.game.Position
+import cberg.sudoku.game.Square
+import cberg.sudoku.game.status
 import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -60,7 +64,7 @@ private fun game(initialState: String) {
                     modifier = dim.squareModifier(square.position).background(Color.White),
                     square = square,
                     onType = { char -> model.writeChar(index, char) },
-                    onDelete = { model.deleteChar(index) }
+                    onDelete = { model.erase(index) }
                 )
             }
         }
