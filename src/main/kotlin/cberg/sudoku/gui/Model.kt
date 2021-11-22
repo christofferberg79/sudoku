@@ -26,23 +26,35 @@ class Model(input: String) {
     }
 
     fun writeChar(position: Position, char: Char) = updateGame {
+        writeChar(position, char)
+    }
+
+    private fun Game.writeChar(position: Position, char: Char): Game {
         if (settings.pencil) {
-            toggleMark(position, char)
+            if (game[position].value == null) {
+                return toggleMark(position, char)
+            }
         } else {
-            if (settings.autoErasePencilMarks) {
-                setValue(position, char).eraseMarks(position, char)
-            } else {
-                setValue(position, char)
+            if (!game[position].given && game[position].value != char) {
+                return if (settings.autoErasePencilMarks) {
+                    setValue(position, char).eraseMarks(position)
+                } else {
+                    setValue(position, char)
+                }
             }
         }
+        return this
     }
 
     fun erase(position: Position) = updateGame {
-        if (!settings.pencil) {
-            eraseValue(position)
-        } else {
-            this
+        erase(position)
+    }
+
+    private fun Game.erase(position: Position): Game {
+        if (!settings.pencil && !game[position].given) {
+            return eraseValue(position)
         }
+        return this
     }
 
     fun writePencilMarks() = updateGame {

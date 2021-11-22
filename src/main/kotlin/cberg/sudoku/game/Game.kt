@@ -12,7 +12,7 @@ data class Square(
 data class Game(
     val squares: List<Square>
 ) {
-    operator fun List<Square>.get(position: Position) = squares[position.index]
+    operator fun get(position: Position) = squares[position.index]
 }
 
 fun Game(input: String): Game {
@@ -51,9 +51,12 @@ fun Game.toggleMark(position: Position, char: Char) = updateSquare(position) {
     copy(marks = if (char in marks) marks - char else marks + char)
 }
 
-fun Game.eraseMarks(position: Position, char: Char): Game {
+fun Game.eraseMarks(position: Position): Game {
+    val value = get(position).value
+    checkNotNull(value)
+
     val affected = affectedBy(position)
-    return updateSquares(affected) { copy(marks = marks - char) }
+    return updateSquares(affected) { copy(marks = marks - value) }
 }
 
 private fun Game.updateSquare(position: Position, transform: Square.() -> Square) =
@@ -71,8 +74,8 @@ fun Game.writePencilMarks() = copy(squares = squares.map { square ->
         marks = if (square.value != null) {
             emptySet()
         } else {
-            val values = affectedBy(square.position).mapNotNull { p -> squares[p].value }.toSet()
-            ('1'..'9').filter { it !in values }.toSet()
+            val values = affectedBy(square.position).mapNotNull { p -> get(p).value }.toSet()
+            ('1'..'9').filterNot { it in values }.toSet()
         }
     )
 })
@@ -92,7 +95,7 @@ val Game.status: GameStatus
 
 private fun Game.isCorrect(): Boolean {
     return groups.all { group ->
-        group.map { position -> squares[position].value }.containsAll(('1'..'9').toList())
+        group.map { position -> get(position).value }.containsAll(('1'..'9').toList())
     }
 }
 
