@@ -2,92 +2,75 @@ package cberg.sudoku.solver
 
 import cberg.sudoku.game.*
 
-sealed class Solution
-class UniqueSolution(val solution: String) : Solution()
-object InvalidPuzzle : Solution()
-object TooHard : Solution()
-
-val symbols = '1'..'9'
-
 class Solver {
-    private lateinit var game: Game
-
     fun solve(input: String): Solution {
-        setInput(input)
+        val game = Game(input).writePencilMarks()
 
-        if (!isValidPuzzle()) {
+        if (game.isInvalidPuzzle()) {
             return InvalidPuzzle
         }
 
-        solve()
+        val solvedGame = solve(game)
 
-        return if (game.squares.any(Square::isNotSet)) {
+        return if (solvedGame.squares.any(Square::isNotSet)) {
             TooHard
         } else {
-            UniqueSolution(getOutput())
+            UniqueSolution(solvedGame.getOutput())
         }
     }
 
-    private fun isValidPuzzle(): Boolean {
-        if (insufficientGivens()) {
-            return false
-        }
-        if (duplicateGivens()) {
-            return false
-        }
-        if (noCandidate()) {
-            return false
-        }
-        if (missingCandidate()) {
-            return false
-        }
-        return true
-    }
+    private fun Game.isInvalidPuzzle() = insufficientGivens()
+            || duplicateGivens()
+            || noCandidate()
+            || missingCandidate()
 
-    private fun insufficientGivens() = game.squares.count(Square::isSet) < 17
+    private fun Game.insufficientGivens() = squares.count(Square::isSet) < 17
 
-    private fun duplicateGivens() = groups.any { group ->
-        group.map { game[it] }
+    private fun Game.duplicateGivens() = groups.any { group ->
+        group.map { position -> get(position) }
             .filter(Square::isSet)
             .groupingBy(Square::value)
             .eachCount()
             .values.any { it > 1 }
     }
 
-    private fun noCandidate() = game.squares.any {
-        it.isNotSet() && it.marks.isEmpty()
+    private fun Game.noCandidate() = squares.any { square ->
+        square.isNotSet() && square.marks.isEmpty()
     }
 
-    private fun missingCandidate() = symbols.any { symbol ->
+    private fun Game.missingCandidate() = symbols.any { symbol ->
         groups.any { group ->
-            group.map { game[it] }.none { square -> symbol == square.value || symbol in square.marks }
+            group.map { position -> get(position) }
+                .none { square -> symbol == square.value || symbol in square.marks }
         }
     }
 
-    private fun setInput(input: String) {
-        game = Game(input).writePencilMarks()
-    }
+    private fun Game.getOutput() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
 
-    private fun getOutput() = game.squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
+    private fun solve(game: Game) = generateSequence(game, this::next).last()
 
-    private fun solve() {
-        generateSequence { actions().firstOrNull() }
-            .forEach { action -> game = action(game) }
-    }
+    private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
 
-    private fun actions() = nakedSingles() + hiddenSingles()
+    private fun Game.actions() = nakedSingles() + hiddenSingles()
 
-    private fun nakedSingles() = game.squares.asSequence()
+    private fun Game.nakedSingles() = squares.asSequence()
         .filter { square -> square.marks.size == 1 }
         .map { square -> Action.SetValue(square.position, square.marks.single()) }
 
-    private fun hiddenSingles() = groups.asSequence().flatMap { group ->
+    private fun Game.hiddenSingles() = groups.asSequence().flatMap { group ->
         symbols.asSequence().mapNotNull { symbol ->
-            group.singleOrNull { position -> symbol in game[position].marks }
+            group.singleOrNull { position -> symbol in get(position).marks }
                 ?.let { position -> Action.SetValue(position, symbol) }
         }
     }
 }
+
+val symbols = '1'..'9'
+
+sealed class Solution
+class UniqueSolution(val solution: String) : Solution()
+object InvalidPuzzle : Solution()
+object TooHard : Solution()
 
 sealed interface Action {
     operator fun invoke(game: Game): Game
