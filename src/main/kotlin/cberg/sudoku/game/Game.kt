@@ -39,24 +39,46 @@ data class Position(val row: Int, val col: Int) {
 private val Position.index get() = row * 9 + col
 private fun Position(index: Int) = positions[index]
 
-fun Game.setValue(position: Position, char: Char) = updateSquare(position) {
-    copy(value = char, marks = emptySet())
+fun Game.setValue(position: Position, char: Char): Game {
+    val square = get(position)
+    if (square.given || square.value == char) {
+        return this
+    }
+
+    return updateSquare(position) {
+        copy(value = char, marks = emptySet())
+    }
 }
 
-fun Game.eraseValue(position: Position) = updateSquare(position) {
-    copy(value = null)
+fun Game.eraseValue(position: Position): Game {
+    val square = get(position)
+    if (square.given || square.value == null) {
+        return this
+    }
+
+    return updateSquare(position) {
+        copy(value = null)
+    }
 }
 
-fun Game.toggleMark(position: Position, char: Char) = updateSquare(position) {
-    copy(marks = if (char in marks) marks - char else marks + char)
+fun Game.toggleMark(position: Position, char: Char): Game {
+    if (get(position).value != null) {
+        return this
+    }
+
+    return updateSquare(position) {
+        copy(marks = if (char in marks) marks - char else marks + char)
+    }
 }
 
-fun Game.eraseMarks(position: Position): Game {
-    val value = get(position).value
-    checkNotNull(value)
+fun Game.setValueAndEraseMarks(position: Position, char: Char): Game {
+    val newGame = setValue(position, char)
+    if (newGame == this) {
+        return this
+    }
 
     val affected = affectedBy(position)
-    return updateSquares(affected) { copy(marks = marks - value) }
+    return newGame.updateSquares(affected) { copy(marks = marks - char) }
 }
 
 private fun Game.updateSquare(position: Position, transform: Square.() -> Square) =
@@ -70,14 +92,12 @@ private fun Game.updateSquares(positions: Set<Position>, transform: Square.() ->
     })
 
 fun Game.writePencilMarks() = copy(squares = squares.map { square ->
-    square.copy(
-        marks = if (square.value != null) {
-            emptySet()
-        } else {
-            val values = affectedBy(square.position).mapNotNull { p -> get(p).value }.toSet()
-            ('1'..'9').filterNot { it in values }.toSet()
-        }
-    )
+    if (square.value == null) {
+        val excludedValues = affectedBy(square.position).mapNotNull { p -> get(p).value }.toSet()
+        square.copy(marks = ('1'..'9').filterNot { it in excludedValues }.toSet())
+    } else {
+        square
+    }
 })
 
 sealed class GameStatus {
