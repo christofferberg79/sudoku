@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.material.TextField
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -31,7 +31,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        app("..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65")
+        Sudoku(".......9..7...5...9.1..7..8.8...4.1..2....7.4....3....3.48.1.2....3...5...9......")
     }
 }
 
@@ -46,14 +46,17 @@ class GameDimensions(private val square: Dp, private val thinLine: Dp, private v
 }
 
 @Composable
-private fun app(initialState: String) {
+private fun Sudoku(initialState: String) {
     val model = remember { Model(initialState) }
     val game = model.game
     val settings = model.settings
 
 
     Row {
-        Game(game, model)
+        Column {
+            Game(game, model)
+            NewGame(onNewGame = { model.startNewGame(it) })
+        }
 
         Column(Modifier.padding(10.dp)) {
             Text(
@@ -75,6 +78,20 @@ private fun app(initialState: String) {
             }
 
             Hints(game, model)
+        }
+    }
+}
+
+@Composable
+fun NewGame(onNewGame: (String) -> Unit) {
+    Row {
+        var gameString by remember { mutableStateOf("") }
+        TextField(
+            value = gameString,
+            onValueChange = { gameString = it }
+        )
+        Button(onClick = { onNewGame(gameString) }) {
+            Text("Start New Game")
         }
     }
 }

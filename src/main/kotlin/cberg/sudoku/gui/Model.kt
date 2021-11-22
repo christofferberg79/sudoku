@@ -64,4 +64,8 @@ class Model(input: String) {
     fun execute(action: Action) = updateGame {
         action(game)
     }
+
+    fun startNewGame(gameString: String) {
+        game = Game(gameString)
+    }
 }
