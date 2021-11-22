@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package cberg.sudoku.gui
 
 import androidx.compose.foundation.background
@@ -33,7 +31,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        app("..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..")
+        app("..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65")
     }
 }
 
@@ -70,6 +68,10 @@ private fun app(initialState: String) {
 
             Button(onClick = model::writePencilMarks) {
                 Text("Write pencil marks")
+            }
+
+            Button(onClick = model::solve) {
+                Text("Solve")
             }
 
             Hints(game, model)
@@ -191,6 +193,7 @@ private sealed class SquareInput {
     data class Value(val value: Char) : SquareInput()
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 private fun KeyEvent.toSquareInput(): SquareInput? {
     if (nativeKeyEvent.id != KEY_PRESSED) {
         return null

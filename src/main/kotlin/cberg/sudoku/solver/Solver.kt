@@ -47,9 +47,6 @@ class Solver {
 
     private fun Game.getOutput() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
 
-    private fun solve(game: Game) = generateSequence(game, this::next).last()
-
-    private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
 }
 
 val symbols = '1'..'9'
@@ -67,6 +64,11 @@ sealed interface Action {
         override fun toString() = "$position => $value"
     }
 }
+
+fun solve(game: Game) = generateSequence(game, ::next).last()
+
+private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
+
 fun Game.actions() = nakedSingles() + hiddenSingles()
 
 private fun Game.nakedSingles() = squares.asSequence()
