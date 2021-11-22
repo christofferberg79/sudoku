@@ -110,12 +110,11 @@ sealed class GameStatus {
     object IncorrectSolution : GameStatus()
 }
 
-val Game.status: GameStatus
-    get() = when {
-        squares.any(Square::isEmpty) -> GameStatus.NotDone
-        isCorrect() -> GameStatus.CorrectSolution
-        else -> GameStatus.IncorrectSolution
-    }
+fun Game.getStatus(): GameStatus = when {
+    squares.any(Square::isEmpty) -> GameStatus.NotDone
+    isCorrect() -> GameStatus.CorrectSolution
+    else -> GameStatus.IncorrectSolution
+}
 
 private fun Game.isCorrect(): Boolean {
     return groups.all { group ->

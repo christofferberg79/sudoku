@@ -22,8 +22,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
-import cberg.sudoku.game.*
-import cberg.sudoku.solver.actions
+import cberg.sudoku.game.GameStatus
+import cberg.sudoku.game.Position
+import cberg.sudoku.game.Square
+import cberg.sudoku.game.isEmpty
+import cberg.sudoku.solver.Action
 import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -31,7 +34,10 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Sudoku(".......9..7...5...9.1..7..8.8...4.1..2....7.4....3....3.48.1.2....3...5...9......")
+        val model = remember {
+            Model(".......9..7...5...9.1..7..8.8...4.1..2....7.4....3....3.48.1.2....3...5...9......")
+        }
+        Sudoku(model)
     }
 }
 
@@ -46,28 +52,40 @@ class GameDimensions(private val square: Dp, private val thinLine: Dp, private v
 }
 
 @Composable
-private fun Sudoku(initialState: String) {
-    val model = remember { Model(initialState) }
+fun Sudoku(model: Model) {
     val game = model.game
     val settings = model.settings
 
-
     Row {
         Column {
-            Game(game, model)
-            NewGame(onNewGame = { model.startNewGame(it) })
+            Game(
+                squares = game.squares,
+                onType = model::writeChar,
+                onDelete = model::erase
+            )
+            NewGame(onNewGame = model::startNewGame)
         }
 
         Column(Modifier.padding(10.dp)) {
             Text(
-                text = when (game.status) {
+                text = when (model.gameStatus) {
                     GameStatus.NotDone -> "Not Done"
                     GameStatus.IncorrectSolution -> "Incorrect"
                     GameStatus.CorrectSolution -> "Correct"
                 }
             )
 
-            Settings(settings, model)
+            Setting(
+                text = "Pencil marks",
+                checked = settings.pencil,
+                onCheckedChange = { model.togglePencil() }
+            )
+
+            Setting(
+                text = "Auto-erase pencil marks",
+                checked = settings.autoErasePencilMarks,
+                onCheckedChange = { model.toggleAutoErasePencilMarks() }
+            )
 
             Button(onClick = model::writePencilMarks) {
                 Text("Write pencil marks")
@@ -77,60 +95,30 @@ private fun Sudoku(initialState: String) {
                 Text("Solve")
             }
 
-            Hints(game, model)
-        }
-    }
-}
-
-@Composable
-fun NewGame(onNewGame: (String) -> Unit) {
-    Row {
-        var gameString by remember { mutableStateOf("") }
-        TextField(
-            value = gameString,
-            onValueChange = { gameString = it }
-        )
-        Button(onClick = { onNewGame(gameString) }) {
-            Text("Start New Game")
-        }
-    }
-}
-
-@Composable
-private fun Game(game: Game, model: Model) {
-    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
-    Box(modifier = dim.gameModifier().background(Color.Black)) {
-        for (square in game.squares) {
-            Square(
-                modifier = dim.squareModifier(square.position).background(Color.White),
-                square = square,
-                onType = { char -> model.writeChar(square.position, char) },
-                onDelete = { model.erase(square.position) }
+            Hints(
+                actions = model.actions,
+                onClick = model::execute
             )
         }
     }
 }
 
 @Composable
-private fun Settings(settings: Settings, model: Model) {
-    Setting(
-        text = "Pencil marks",
-        checked = settings.pencil,
-        onCheckedChange = { model.togglePencil() }
-    )
-
-    Setting(
-        text = "Auto-erase pencil marks",
-        checked = settings.autoErasePencilMarks,
-        onCheckedChange = { model.toggleAutoErasePencilMarks() }
-    )
-}
-
-@Composable
-private fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row {
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-        Text(text = text, modifier = Modifier.align(Alignment.CenterVertically))
+fun Game(
+    squares: List<Square>,
+    onType: (Position, Char) -> Unit,
+    onDelete: (Position) -> Unit
+) {
+    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
+    Box(modifier = dim.gameModifier().background(Color.Black)) {
+        for (square in squares) {
+            Square(
+                modifier = dim.squareModifier(square.position).background(Color.White),
+                square = square,
+                onType = { char -> onType(square.position, char) },
+                onDelete = { onDelete(square.position) }
+            )
+        }
     }
 }
 
@@ -164,7 +152,7 @@ fun Square(
 }
 
 @Composable
-private fun SquareMarks(square: Square) {
+fun SquareMarks(square: Square) {
     Column(Modifier.fillMaxSize().padding(1.dp)) {
         for (row in 0..2) {
             Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -184,7 +172,7 @@ private fun SquareMarks(square: Square) {
 }
 
 @Composable
-private fun SquareValue(square: Square) {
+fun SquareValue(square: Square) {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "${square.value}",
@@ -196,11 +184,36 @@ private fun SquareValue(square: Square) {
 }
 
 @Composable
-fun Hints(game: Game, model: Model) {
+fun NewGame(onNewGame: (String) -> Unit) {
+    Row {
+        var gameString by remember { mutableStateOf("") }
+        TextField(
+            value = gameString,
+            onValueChange = { gameString = it }
+        )
+        Button(onClick = { onNewGame(gameString) }) {
+            Text("Start New Game")
+        }
+    }
+}
+
+@Composable
+fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Text(text = text, modifier = Modifier.align(Alignment.CenterVertically))
+    }
+}
+
+@Composable
+fun Hints(actions: List<Action>, onClick: (Action) -> Unit) {
     Column {
         Text(text = "Hints", fontSize = 20.sp)
-        for (action in game.actions()) {
-            Text(text = action.toString(), modifier = Modifier.clickable { model.execute(action) })
+        for (action in actions) {
+            Text(
+                text = action.toString(),
+                modifier = Modifier.clickable { onClick(action) }
+            )
         }
     }
 }
