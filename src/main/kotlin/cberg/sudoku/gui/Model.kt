@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cberg.sudoku.game.*
+import cberg.sudoku.solver.Action
 
 data class Settings(
     val autoErasePencilMarks: Boolean = true,
@@ -53,5 +54,9 @@ class Model(input: String) {
 
     fun toggleAutoErasePencilMarks() = updateSettings {
         copy(autoErasePencilMarks = !autoErasePencilMarks)
+    }
+
+    fun execute(action: Action) = updateGame {
+        action(game)
     }
 }

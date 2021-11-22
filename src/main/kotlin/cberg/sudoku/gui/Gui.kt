@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
 import cberg.sudoku.game.*
+import cberg.sudoku.solver.actions
 import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -70,6 +71,8 @@ private fun app(initialState: String) {
             Button(onClick = model::writePencilMarks) {
                 Text("Write pencil marks")
             }
+
+            Hints(game, model)
         }
     }
 }
@@ -170,6 +173,16 @@ private fun SquareValue(square: Square) {
             fontSize = 40.sp,
             color = if (square.given) Color.Black else Color.Blue
         )
+    }
+}
+
+@Composable
+fun Hints(game: Game, model: Model) {
+    Column {
+        Text(text = "Hints", fontSize = 20.sp)
+        for (action in game.actions()) {
+            Text(text = action.toString(), modifier = Modifier.clickable { model.execute(action) })
+        }
     }
 }
 

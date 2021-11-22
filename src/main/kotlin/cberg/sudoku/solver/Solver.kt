@@ -50,19 +50,6 @@ class Solver {
     private fun solve(game: Game) = generateSequence(game, this::next).last()
 
     private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
-
-    private fun Game.actions() = nakedSingles() + hiddenSingles()
-
-    private fun Game.nakedSingles() = squares.asSequence()
-        .filter { square -> square.marks.size == 1 }
-        .map { square -> Action.SetValue(square.position, square.marks.single()) }
-
-    private fun Game.hiddenSingles() = groups.asSequence().flatMap { group ->
-        symbols.asSequence().mapNotNull { symbol ->
-            group.singleOrNull { position -> symbol in squareAt(position).marks }
-                ?.let { position -> Action.SetValue(position, symbol) }
-        }
-    }
 }
 
 val symbols = '1'..'9'
@@ -77,5 +64,18 @@ sealed interface Action {
 
     class SetValue(private val position: Position, private val value: Char) : Action {
         override fun invoke(game: Game) = game.setValueAndEraseMarks(position, value)
+        override fun toString() = "$position => $value"
+    }
+}
+fun Game.actions() = nakedSingles() + hiddenSingles()
+
+private fun Game.nakedSingles() = squares.asSequence()
+    .filter { square -> square.marks.size == 1 }
+    .map { square -> Action.SetValue(square.position, square.marks.single()) }
+
+private fun Game.hiddenSingles() = groups.asSequence().flatMap { group ->
+    symbols.asSequence().mapNotNull { symbol ->
+        group.singleOrNull { position -> symbol in squareAt(position).marks }
+            ?.let { position -> Action.SetValue(position, symbol) }
     }
 }
