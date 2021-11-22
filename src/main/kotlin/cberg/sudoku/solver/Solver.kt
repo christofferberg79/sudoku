@@ -12,7 +12,7 @@ class Solver {
 
         val solvedGame = solve(game)
 
-        return if (solvedGame.squares.any(Square::isNotSet)) {
+        return if (solvedGame.squares.any(Square::isEmpty)) {
             TooHard
         } else {
             UniqueSolution(solvedGame.getOutput())
@@ -24,23 +24,23 @@ class Solver {
             || noCandidate()
             || missingCandidate()
 
-    private fun Game.insufficientGivens() = squares.count(Square::isSet) < 17
+    private fun Game.insufficientGivens() = squares.count(Square::isNotEmpty) < 17
 
     private fun Game.duplicateGivens() = groups.any { group ->
-        group.map { position -> get(position) }
-            .filter(Square::isSet)
+        group.map { position -> squareAt(position) }
+            .filter(Square::isNotEmpty)
             .groupingBy(Square::value)
             .eachCount()
             .values.any { it > 1 }
     }
 
     private fun Game.noCandidate() = squares.any { square ->
-        square.isNotSet() && square.marks.isEmpty()
+        square.isEmpty() && square.marks.isEmpty()
     }
 
     private fun Game.missingCandidate() = symbols.any { symbol ->
         groups.any { group ->
-            group.map { position -> get(position) }
+            group.map { position -> squareAt(position) }
                 .none { square -> symbol == square.value || symbol in square.marks }
         }
     }
@@ -59,7 +59,7 @@ class Solver {
 
     private fun Game.hiddenSingles() = groups.asSequence().flatMap { group ->
         symbols.asSequence().mapNotNull { symbol ->
-            group.singleOrNull { position -> symbol in get(position).marks }
+            group.singleOrNull { position -> symbol in squareAt(position).marks }
                 ?.let { position -> Action.SetValue(position, symbol) }
         }
     }
@@ -79,6 +79,3 @@ sealed interface Action {
         override fun invoke(game: Game) = game.setValueAndEraseMarks(position, value)
     }
 }
-
-private fun Square.isSet() = value != null
-private fun Square.isNotSet() = value == null

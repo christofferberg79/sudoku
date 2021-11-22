@@ -133,7 +133,7 @@ fun Square(
                 return@onKeyEvent true
             }
     ) {
-        if (square.value == null) {
+        if (square.isEmpty()) {
             SquareMarks(square)
         } else {
             SquareValue(square)

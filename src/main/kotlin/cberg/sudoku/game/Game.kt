@@ -9,11 +9,14 @@ data class Square(
     val marks: Set<Char> = emptySet()
 )
 
+fun Square.isEmpty() = value == null
+fun Square.isNotEmpty() = value != null
+
 data class Game(
     val squares: List<Square>
-) {
-    operator fun get(position: Position) = squares[position.index]
-}
+)
+
+fun Game.squareAt(position: Position) = squares[position.index]
 
 fun Game(input: String): Game {
     require(input.length == 81)
@@ -40,7 +43,7 @@ private val Position.index get() = row * 9 + col
 private fun Position(index: Int) = positions[index]
 
 fun Game.setValue(position: Position, char: Char): Game {
-    val square = get(position)
+    val square = squareAt(position)
     if (square.given || square.value == char) {
         return this
     }
@@ -51,8 +54,8 @@ fun Game.setValue(position: Position, char: Char): Game {
 }
 
 fun Game.eraseValue(position: Position): Game {
-    val square = get(position)
-    if (square.given || square.value == null) {
+    val square = squareAt(position)
+    if (square.given || square.isEmpty()) {
         return this
     }
 
@@ -62,7 +65,7 @@ fun Game.eraseValue(position: Position): Game {
 }
 
 fun Game.toggleMark(position: Position, char: Char): Game {
-    if (get(position).value != null) {
+    if (squareAt(position).isNotEmpty()) {
         return this
     }
 
@@ -92,8 +95,9 @@ private fun Game.updateSquares(positions: Set<Position>, transform: Square.() ->
     })
 
 fun Game.writePencilMarks() = copy(squares = squares.map { square ->
-    if (square.value == null) {
-        val excludedValues = affectedBy(square.position).mapNotNull { p -> get(p).value }.toSet()
+    if (square.isEmpty()) {
+        val excludedValues = affectedBy(square.position)
+            .mapNotNull { position -> squareAt(position).value }.toSet()
         square.copy(marks = ('1'..'9').filterNot { it in excludedValues }.toSet())
     } else {
         square
@@ -108,14 +112,14 @@ sealed class GameStatus {
 
 val Game.status: GameStatus
     get() = when {
-        squares.any { it.value == null } -> GameStatus.NotDone
+        squares.any(Square::isEmpty) -> GameStatus.NotDone
         isCorrect() -> GameStatus.CorrectSolution
         else -> GameStatus.IncorrectSolution
     }
 
 private fun Game.isCorrect(): Boolean {
     return groups.all { group ->
-        group.map { position -> get(position).value }.containsAll(('1'..'9').toList())
+        group.map { position -> squareAt(position).value }.containsAll(('1'..'9').toList())
     }
 }
 
