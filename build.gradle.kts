@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.compose") version "1.0.0-beta5"
 }
 
-group = "me.k97826"
+group = "cberg"
 version = "1.0-SNAPSHOT"
 
 repositories {
