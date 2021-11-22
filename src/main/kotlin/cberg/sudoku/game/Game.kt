@@ -124,7 +124,7 @@ private val positions = List(81) { i -> Position(i / 9, i % 9) }
 private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
 private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
 private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
-private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
+val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
 private fun affectedBy(position: Position) = buildSet {
     addAll(rows[position.row])
     addAll(cols[position.col])

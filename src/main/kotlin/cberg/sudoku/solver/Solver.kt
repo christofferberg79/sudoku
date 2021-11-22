@@ -1,5 +1,7 @@
 package cberg.sudoku.solver
 
+import cberg.sudoku.game.*
+
 sealed class Solution
 class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
@@ -7,20 +9,8 @@ object TooHard : Solution()
 
 val symbols = '1'..'9'
 
-class Square(val row: Int, val col: Int) {
-    val block: Int = row / 3 * 3 + col / 3
-    var value: Char? = null
-    val candidates = symbols.toMutableSet()
-
-    fun isSet() = value != null
-    fun isNotSet() = value == null
-}
-
 class Solver {
-    private val squares = List(81) { i -> Square(i / 9, i % 9) }
-    private val rows = List(9) { row -> squares.filter { s -> s.row == row } }
-    private val cols = List(9) { col -> squares.filter { s -> s.col == col } }
-    private val blocks = List(9) { block -> squares.filter { s -> s.block == block } }
+    private lateinit var game: Game
 
     fun solve(input: String): Solution {
         setInput(input)
@@ -31,7 +21,7 @@ class Solver {
 
         solve()
 
-        return if (squares.any(Square::isNotSet)) {
+        return if (game.squares.any(Square::isNotSet)) {
             TooHard
         } else {
             UniqueSolution(getOutput())
@@ -54,35 +44,34 @@ class Solver {
         return true
     }
 
-    private fun insufficientGivens() = squares.count(Square::isSet) < 17
+    private fun insufficientGivens() = game.squares.count(Square::isSet) < 17
 
     private fun duplicateGivens() = groups.any { group ->
-        group.filter(Square::isSet)
+        group.map { game[it] }
+            .filter(Square::isSet)
             .groupingBy(Square::value)
             .eachCount()
             .values.any { it > 1 }
     }
 
-    private fun noCandidate() = squares.any {
-        it.isNotSet() && it.candidates.isEmpty()
+    private fun noCandidate() = game.squares.any {
+        it.isNotSet() && it.marks.isEmpty()
     }
 
     private fun missingCandidate() = symbols.any { symbol ->
         groups.any { group ->
-            group.none { square -> symbol == square.value || symbol in square.candidates }
+            group.map { game[it] }.none { square -> symbol == square.value || symbol in square.marks }
         }
     }
 
-    private fun setInput(input: String) = input.mapIndexed { i, c -> squares[i] to c }
-        .filter { (_, c) -> c in symbols }
-        .forEach { (s, c) -> set(s, c) }
+    private fun setInput(input: String) {
+        game = Game(input).writePencilMarks()
+    }
 
-    private fun getOutput() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
+    private fun getOutput() = game.squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
 
-    private fun set(square: Square, symbol: Char) {
-        square.value = symbol
-        square.candidates.clear()
-        affectedBy(square).forEach { it.candidates.remove(symbol) }
+    private fun set(position: Position, symbol: Char) {
+        game = game.setValueAndEraseMarks(position, symbol)
     }
 
     private fun solve() {
@@ -94,9 +83,9 @@ class Solver {
     }
 
     private fun nakedSingles(): Boolean {
-        squares.firstOrNull { square -> square.candidates.size == 1 }
+        game.squares.firstOrNull { square -> square.marks.size == 1 }
             ?.let { square ->
-                set(square, square.candidates.single())
+                set(square.position, square.marks.single())
                 return true
             }
         return false
@@ -105,19 +94,16 @@ class Solver {
     private fun hiddenSingles(): Boolean {
         for (group in groups) {
             for (symbol in symbols) {
-                group.singleOrNull { square -> symbol in square.candidates }
-                    ?.let { square ->
-                        set(square, symbol)
+                group.singleOrNull { position -> symbol in game[position].marks }
+                    ?.let { position ->
+                        set(position, symbol)
                         return true
                     }
             }
         }
         return false
     }
-
-    private val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
-
-    private fun affectedBy(s: Square): Sequence<Square> {
-        return rows[s.row].asSequence() + cols[s.col].asSequence() + blocks[s.block].asSequence()
-    }
 }
+
+private fun Square.isSet() = value != null
+private fun Square.isNotSet() = value == null
