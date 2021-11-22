@@ -70,38 +70,30 @@ class Solver {
 
     private fun getOutput() = game.squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
 
-    private fun set(position: Position, symbol: Char) {
-        game = game.setValueAndEraseMarks(position, symbol)
-    }
-
     private fun solve() {
-        var progress = true
-        while (progress) {
-            progress = nakedSingles()
-                    || hiddenSingles()
-        }
+        generateSequence { actions().firstOrNull() }
+            .forEach { action -> game = action(game) }
     }
 
-    private fun nakedSingles(): Boolean {
-        game.squares.firstOrNull { square -> square.marks.size == 1 }
-            ?.let { square ->
-                set(square.position, square.marks.single())
-                return true
-            }
-        return false
-    }
+    private fun actions() = nakedSingles() + hiddenSingles()
 
-    private fun hiddenSingles(): Boolean {
-        for (group in groups) {
-            for (symbol in symbols) {
-                group.singleOrNull { position -> symbol in game[position].marks }
-                    ?.let { position ->
-                        set(position, symbol)
-                        return true
-                    }
-            }
+    private fun nakedSingles() = game.squares.asSequence()
+        .filter { square -> square.marks.size == 1 }
+        .map { square -> Action.SetValue(square.position, square.marks.single()) }
+
+    private fun hiddenSingles() = groups.asSequence().flatMap { group ->
+        symbols.asSequence().mapNotNull { symbol ->
+            group.singleOrNull { position -> symbol in game[position].marks }
+                ?.let { position -> Action.SetValue(position, symbol) }
         }
-        return false
+    }
+}
+
+sealed interface Action {
+    operator fun invoke(game: Game): Game
+
+    class SetValue(private val position: Position, private val value: Char) : Action {
+        override fun invoke(game: Game) = game.setValueAndEraseMarks(position, value)
     }
 }
 
