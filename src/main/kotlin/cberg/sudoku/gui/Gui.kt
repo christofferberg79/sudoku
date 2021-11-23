@@ -14,10 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +24,6 @@ import cberg.sudoku.game.Position
 import cberg.sudoku.game.Square
 import cberg.sudoku.game.isEmpty
 import cberg.sudoku.solver.Action
-import java.awt.event.KeyEvent.KEY_PRESSED
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
     Box(
@@ -225,13 +221,13 @@ private sealed class SquareInput {
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun KeyEvent.toSquareInput(): SquareInput? {
-    if (nativeKeyEvent.id != KEY_PRESSED) {
+    if (type != KeyEventType.KeyDown) {
         return null
     }
     if (key == Key.Delete || key == Key.Backspace) {
         return SquareInput.Delete
     }
-    val char = nativeKeyEvent.keyChar
+    val char = utf16CodePoint.toChar()
     if (char in '1'..'9') {
         return SquareInput.Value(char)
     }
