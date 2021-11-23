@@ -64,18 +64,9 @@ sealed interface Action {
         override fun toString() = "$position => $value"
     }
 
-    class NakedPair(
-        private val positions: Pair<Position, Position>,
-        private val values: Pair<Char, Char>,
-        val group: List<Position>
-    ) : Action {
-        override fun invoke(game: Game): Game {
-            var newGame = game
-            group.forEach { p -> newGame = newGame.eraseMark(p, values.first).eraseMark(p, values.second) }
-            return newGame
-        }
-
-        override fun toString() = "Naked pair in $positions: $values ($group)"
+    class EraseMarks(private val position: Position, private val marks: List<Char>) : Action {
+        override fun invoke(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
+        override fun toString() = "$position => erase marks: ${marks.joinToString()}"
     }
 }
 
@@ -83,36 +74,31 @@ fun solve(game: Game) = generateSequence(game, ::next).last()
 
 private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
 
-fun Game.actions() = nakedSingles() + hiddenSingles() + nakedPairs()
+fun Game.actions(): Sequence<Action> = nakedSingles() + hiddenSingles() + nakedPairs()
 
-private fun Game.nakedSingles() = squares.asSequence()
+private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
     .map { square -> Action.SetValue(square.position, square.marks.single()) }
 
-private fun Game.hiddenSingles() = groups.asSequence().flatMap { group ->
+private fun Game.hiddenSingles(): Sequence<Action> = groups.flatMap { group ->
     symbols.asSequence().mapNotNull { symbol ->
         group.singleOrNull { position -> symbol in squareAt(position).marks }
             ?.let { position -> Action.SetValue(position, symbol) }
     }
 }
 
-private fun Game.nakedPairs() = groups.asSequence().flatMap { group ->
-    val squares = group.asSequence().map { squareAt(it) }.filter { it.isEmpty() }
-    pairsFrom(squares)
-        .map { (s1, s2) -> Pair(s1.position, s2.position) to s1.marks + s2.marks }
-        .filter { (_, m) -> m.size == 2 }
-        .mapNotNull { (p, m) ->
-            val filteredGroup = group.filter { it != p.first && it != p.second }
-                .filter { pos-> m.any { c -> c in squareAt(pos).marks } }
-            if (filteredGroup.isEmpty()) {
-                null
-            } else {
-                Action.NakedPair(
-                    positions = p,
-                    values = m.toList().let { (m1, m2) -> Pair(m1, m2) },
-                    group = filteredGroup
-                )
-            }
+private fun Game.nakedPairs(): Sequence<Action> = groups.flatMap { group ->
+    group.asSequence()
+        .map { position -> squareAt(position) }
+        .filter { square -> square.isEmpty() }
+        .let { squares -> pairsFrom(squares) }
+        .map { (s1, s2) -> Triple(s1.position, s2.position, s1.marks + s2.marks) }
+        .filter { (_, _, marks) -> marks.size == 2 }
+        .flatMap { (p1, p2, marks) ->
+            group.asSequence().filter { position -> position != p1 && position != p2 }
+                .map { position -> position to marks.filter { c -> c in squareAt(position).marks } }
+                .filterNot { (_, marks) -> marks.isEmpty() }
+                .map { (position, marks) -> Action.EraseMarks(position, marks) }
         }
 }
 
