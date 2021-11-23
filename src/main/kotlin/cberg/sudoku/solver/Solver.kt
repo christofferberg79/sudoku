@@ -74,7 +74,10 @@ fun solve(game: Game) = generateSequence(game, ::next).last()
 
 private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
 
-fun Game.actions(): Sequence<Action> = nakedSingles() + hiddenSingles() + nakedPairs() + nakedTriples()
+fun Game.actions(): Sequence<Action> = nakedSingles() +
+        hiddenSingles() +
+        nakedTuples(2) +
+        nakedTuples(3)
 
 private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
@@ -87,44 +90,36 @@ private fun Game.hiddenSingles(): Sequence<Action> = groups.flatMap { group ->
     }
 }
 
-private fun Game.nakedPairs(): Sequence<Action> = groups.flatMap { group ->
+private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group ->
     group.asSequence()
         .map { position -> squareAt(position) }
         .filter { square -> square.isEmpty() }
-        .let { squares -> pairsFrom(squares) }
-        .map { (s1, s2) -> Triple(s1.position, s2.position, s1.marks + s2.marks) }
-        .filter { (_, _, marks) -> marks.size == 2 }
-        .flatMap { (p1, p2, marks) ->
-            group.asSequence().filter { position -> position != p1 && position != p2 }
+        .let { squares -> tuplesFrom(squares, n) }
+        .map { squares -> squares to squares.map { square -> square.marks }.reduce(Set<Char>::plus) }
+        .filter { (_, marks) -> marks.size == n }
+        .flatMap { (squares, marks) ->
+            group.asSequence()
+                .filterNot { position -> position in squares.map { square -> square.position } }
                 .map { position -> position to marks.filter { c -> c in squareAt(position).marks } }
                 .filterNot { (_, marks) -> marks.isEmpty() }
                 .map { (position, marks) -> Action.EraseMarks(position, marks) }
         }
 }
 
-private fun Game.nakedTriples(): Sequence<Action> = groups.flatMap { group ->
-    group.asSequence()
-        .map { position -> squareAt(position) }
-        .filter { square -> square.isEmpty() }
-        .let { squares -> triplesFrom(squares) }
-        .map { (s1, s2, s3) -> Triple(s1.position, s2.position, s3.position) to s1.marks + s2.marks + s3.marks }
-        .filter { (_, marks) -> marks.size == 3 }
-        .flatMap { (positions, marks) ->
-            group.asSequence().filter { position -> position != positions.first && position != positions.second && position != positions.third }
-                .map { position -> position to marks.filter { c -> c in squareAt(position).marks } }
-                .filterNot { (_, marks) -> marks.isEmpty() }
-                .map { (position, marks) -> Action.EraseMarks(position, marks) }
-        }
+private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<List<E>> = when (n) {
+    2 -> pairsFrom(l)
+    3 -> triplesFrom(l)
+    else -> error("n is too large: $n")
 }
 
-private fun <E> pairsFrom(l: Sequence<E>): Sequence<Pair<E, E>> =
+private fun <E> pairsFrom(l: Sequence<E>): Sequence<List<E>> =
     l.flatMapIndexed { i, v1 ->
-        l.drop(i + 1).map { v2 -> Pair(v1, v2) }
+        l.drop(i + 1).map { v2 -> listOf(v1, v2) }
     }
 
-private fun <E> triplesFrom(l: Sequence<E>): Sequence<Triple<E, E, E>> =
+private fun <E> triplesFrom(l: Sequence<E>): Sequence<List<E>> =
     l.flatMapIndexed { i1, v1 ->
         l.drop(i1 + 1).flatMapIndexed { i2, v2 ->
-            l.drop(i1 + i2 + 2).map { v3 -> Triple(v1, v2, v3) }
+            l.drop(i1 + i2 + 2).map { v3 -> listOf(v1, v2, v3) }
         }
     }
