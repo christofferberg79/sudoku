@@ -121,20 +121,15 @@ private fun Game.hiddenTuples(n: Int): Sequence<Action> = groups.flatMap { group
         }
 }
 
-private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<Set<E>> = when (n) {
-    2 -> pairsFrom(l)
-    3 -> triplesFrom(l)
-    else -> error("$n-tuples not yet supported")
-}
+private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<Set<E>> {
+    require(n >= 1)
 
-private fun <E> pairsFrom(l: Sequence<E>): Sequence<Set<E>> =
-    l.flatMapIndexed { i, v1 ->
-        l.drop(i + 1).map { v2 -> setOf(v1, v2) }
-    }
-
-private fun <E> triplesFrom(l: Sequence<E>): Sequence<Set<E>> =
-    l.flatMapIndexed { i1, v1 ->
-        l.drop(i1 + 1).flatMapIndexed { i2, v2 ->
-            l.drop(i1 + i2 + 2).map { v3 -> setOf(v1, v2, v3) }
+    return if (n == 1) {
+        l.map { setOf(it) }
+    } else {
+        l.flatMapIndexed { i, v ->
+            tuplesFrom(l.drop(i + 1), n - 1)
+                .map { it + v }
         }
     }
+}
