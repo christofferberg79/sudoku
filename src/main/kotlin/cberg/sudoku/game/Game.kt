@@ -12,7 +12,9 @@ fun Square.isNotEmpty() = value != null
 
 data class Game(
     val squares: List<Square>
-)
+) {
+    override fun toString() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
+}
 
 fun Game.squareAt(position: Position) = squares[position.index]
 

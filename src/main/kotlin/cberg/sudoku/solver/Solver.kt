@@ -15,7 +15,7 @@ class Solver {
         return if (solvedGame.squares.any(Square::isEmpty)) {
             TooHard
         } else {
-            UniqueSolution(solvedGame.getOutput())
+            UniqueSolution(solvedGame.toString())
         }
     }
 
@@ -45,8 +45,6 @@ class Solver {
         }
     }
 
-    private fun Game.getOutput() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
-
 }
 
 val symbols = '1'..'9'
@@ -56,17 +54,17 @@ class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
-sealed interface Action {
-    operator fun invoke(game: Game): Game
+sealed class Action(val technique: String) {
+    abstract operator fun invoke(game: Game): Game
 
-    class SetValue(private val position: Position, private val value: Char) : Action {
+    class SetValue(private val position: Position, private val value: Char, t: String) : Action(t) {
         override fun invoke(game: Game) = game.setValueAndEraseMarks(position, value)
-        override fun toString() = "$position => $value"
+        override fun toString() = "[$technique] $position => $value"
     }
 
-    class EraseMarks(private val position: Position, private val marks: List<Char>) : Action {
+    class EraseMarks(private val position: Position, private val marks: Set<Char>, t: String) : Action(t) {
         override fun invoke(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
-        override fun toString() = "$position => erase marks: ${marks.joinToString()}"
+        override fun toString() = "[$technique] $position => erase marks: ${marks.joinToString()}"
     }
 }
 
@@ -77,16 +75,17 @@ private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> act
 fun Game.actions(): Sequence<Action> = nakedSingles() +
         hiddenSingles() +
         nakedTuples(2) +
+        hiddenPairs() +
         nakedTuples(3)
 
 private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
-    .map { square -> Action.SetValue(square.position, square.marks.single()) }
+    .map { square -> Action.SetValue(square.position, square.marks.single(), "NS") }
 
 private fun Game.hiddenSingles(): Sequence<Action> = groups.flatMap { group ->
     symbols.asSequence().mapNotNull { symbol ->
         group.singleOrNull { position -> symbol in squareAt(position).marks }
-            ?.let { position -> Action.SetValue(position, symbol) }
+            ?.let { position -> Action.SetValue(position, symbol, "HS") }
     }
 }
 
@@ -100,26 +99,43 @@ private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group 
         .flatMap { (squares, marks) ->
             group.asSequence()
                 .filterNot { position -> position in squares.map { square -> square.position } }
-                .map { position -> position to marks.filter { c -> c in squareAt(position).marks } }
+                .map { position -> position to marks.intersect(squareAt(position).marks) }
                 .filterNot { (_, marks) -> marks.isEmpty() }
-                .map { (position, marks) -> Action.EraseMarks(position, marks) }
+                .map { (position, marks) -> Action.EraseMarks(position, marks.toSet(), "NT($n)") }
         }
 }
 
-private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<List<E>> = when (n) {
+private fun Game.hiddenPairs(): Sequence<Action> = groups.flatMap { group ->
+    val squares = group
+        .map { position -> squareAt(position) }
+        .filter { square -> square.isEmpty() }
+    val marks = squares.fold(mutableSetOf<Char>()) { marks, square -> marks.apply { addAll(square.marks) } }
+    val pairs = tuplesFrom(marks.asSequence(), 2)
+    pairs.associateWith { pair -> squares.filter { square -> pair.any { c -> c in square.marks } } }
+        .filterValues { squares -> squares.size == 2 }
+        .flatMap { (pair, squares) ->
+            squares.map { square -> square.position to square.marks - pair }
+                .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
+                .map { (position, marksToErase) ->
+                    Action.EraseMarks(position = position, marks = marksToErase, "HP")
+                }
+        }
+}
+
+private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<Set<E>> = when (n) {
     2 -> pairsFrom(l)
     3 -> triplesFrom(l)
     else -> error("n is too large: $n")
 }
 
-private fun <E> pairsFrom(l: Sequence<E>): Sequence<List<E>> =
+private fun <E> pairsFrom(l: Sequence<E>): Sequence<Set<E>> =
     l.flatMapIndexed { i, v1 ->
-        l.drop(i + 1).map { v2 -> listOf(v1, v2) }
+        l.drop(i + 1).map { v2 -> setOf(v1, v2) }
     }
 
-private fun <E> triplesFrom(l: Sequence<E>): Sequence<List<E>> =
+private fun <E> triplesFrom(l: Sequence<E>): Sequence<Set<E>> =
     l.flatMapIndexed { i1, v1 ->
         l.drop(i1 + 1).flatMapIndexed { i2, v2 ->
-            l.drop(i1 + i2 + 2).map { v3 -> listOf(v1, v2, v3) }
+            l.drop(i1 + i2 + 2).map { v3 -> setOf(v1, v2, v3) }
         }
     }

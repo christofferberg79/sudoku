@@ -35,7 +35,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         contentAlignment = Alignment.Center
     ) {
         val model = remember {
-            Model(".......9..7...5...9.1..7..8.8...4.1..2....7.4....3....3.48.1.2....3...5...9......")
+            Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
         }
         Sudoku(model)
     }
