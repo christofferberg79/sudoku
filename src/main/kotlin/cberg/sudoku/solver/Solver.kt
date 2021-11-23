@@ -74,7 +74,7 @@ fun solve(game: Game) = generateSequence(game, ::next).last()
 
 private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
 
-fun Game.actions(): Sequence<Action> = nakedSingles() + hiddenSingles() + nakedPairs()
+fun Game.actions(): Sequence<Action> = nakedSingles() + hiddenSingles() + nakedPairs() + nakedTriples()
 
 private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
@@ -102,7 +102,29 @@ private fun Game.nakedPairs(): Sequence<Action> = groups.flatMap { group ->
         }
 }
 
+private fun Game.nakedTriples(): Sequence<Action> = groups.flatMap { group ->
+    group.asSequence()
+        .map { position -> squareAt(position) }
+        .filter { square -> square.isEmpty() }
+        .let { squares -> triplesFrom(squares) }
+        .map { (s1, s2, s3) -> Triple(s1.position, s2.position, s3.position) to s1.marks + s2.marks + s3.marks }
+        .filter { (_, marks) -> marks.size == 3 }
+        .flatMap { (positions, marks) ->
+            group.asSequence().filter { position -> position != positions.first && position != positions.second && position != positions.third }
+                .map { position -> position to marks.filter { c -> c in squareAt(position).marks } }
+                .filterNot { (_, marks) -> marks.isEmpty() }
+                .map { (position, marks) -> Action.EraseMarks(position, marks) }
+        }
+}
+
 private fun <E> pairsFrom(l: Sequence<E>): Sequence<Pair<E, E>> =
     l.flatMapIndexed { i, v1 ->
         l.drop(i + 1).map { v2 -> Pair(v1, v2) }
+    }
+
+private fun <E> triplesFrom(l: Sequence<E>): Sequence<Triple<E, E, E>> =
+    l.flatMapIndexed { i1, v1 ->
+        l.drop(i1 + 1).flatMapIndexed { i2, v2 ->
+            l.drop(i1 + i2 + 2).map { v3 -> Triple(v1, v2, v3) }
+        }
     }
