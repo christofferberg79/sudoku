@@ -75,8 +75,9 @@ private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> act
 fun Game.actions(): Sequence<Action> = nakedSingles() +
         hiddenSingles() +
         nakedTuples(2) +
-        hiddenPairs() +
-        nakedTuples(3)
+        hiddenTuples(2) +
+        nakedTuples(3) +
+        hiddenTuples(3)
 
 private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
@@ -105,27 +106,25 @@ private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group 
         }
 }
 
-private fun Game.hiddenPairs(): Sequence<Action> = groups.flatMap { group ->
+private fun Game.hiddenTuples(n: Int): Sequence<Action> = groups.flatMap { group ->
     val squares = group
         .map { position -> squareAt(position) }
         .filter { square -> square.isEmpty() }
     val marks = squares.fold(mutableSetOf<Char>()) { marks, square -> marks.apply { addAll(square.marks) } }
-    val pairs = tuplesFrom(marks.asSequence(), 2)
-    pairs.associateWith { pair -> squares.filter { square -> pair.any { c -> c in square.marks } } }
-        .filterValues { squares -> squares.size == 2 }
-        .flatMap { (pair, squares) ->
-            squares.map { square -> square.position to square.marks - pair }
+    val tuples = tuplesFrom(marks.asSequence(), n)
+    tuples.associateWith { tuple -> squares.filter { square -> square.marks.any { c -> tuple.contains(c) } } }
+        .filterValues { squares -> squares.size == n }
+        .flatMap { (tuple, squares) ->
+            squares.map { square -> square.position to square.marks - tuple }
                 .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
-                .map { (position, marksToErase) ->
-                    Action.EraseMarks(position = position, marks = marksToErase, "HP")
-                }
+                .map { (position, marksToErase) -> Action.EraseMarks(position, marksToErase, "HP($n)") }
         }
 }
 
 private fun <E> tuplesFrom(l: Sequence<E>, n: Int): Sequence<Set<E>> = when (n) {
     2 -> pairsFrom(l)
     3 -> triplesFrom(l)
-    else -> error("n is too large: $n")
+    else -> error("$n-tuples not yet supported")
 }
 
 private fun <E> pairsFrom(l: Sequence<E>): Sequence<Set<E>> =
