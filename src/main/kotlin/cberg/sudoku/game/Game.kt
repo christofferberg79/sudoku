@@ -84,6 +84,16 @@ fun Game.setValueAndEraseMarks(position: Position, char: Char): Game {
     return newGame.updateSquares(affected) { copy(marks = marks - char) }
 }
 
+fun Game.eraseMark(position: Position, char: Char): Game {
+    val square = squareAt(position)
+    if (char !in square.marks) {
+        return this
+    }
+    return updateSquare(position) {
+        copy(marks = marks - char)
+    }
+}
+
 private fun Game.updateSquare(position: Position, transform: Square.() -> Square) =
     copy(squares = squares.map { square ->
         if (square.position == position) transform(square) else square

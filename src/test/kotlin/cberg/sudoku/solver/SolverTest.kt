@@ -131,11 +131,8 @@ class SolverTest {
     @Test
     fun sudokuDotComExpert4() {
         val input = "6725..................49....1.....7...3.854..9.....56....2.....2..7.3.9..5....83."
-        testTooHardPuzzle(input)
-
-        // TODO when solver is improved:
-//        val solution = "672531984549827613831649257415962378763185429928374561396218745284753196157496832"
-//        testPuzzleWithUniqueSolution(input, solution)
+        val solution = "672531984549827613831649257415962378763185429928374561396218745284753196157496832"
+        testPuzzleWithUniqueSolution(input, solution)
     }
 
     @Test
