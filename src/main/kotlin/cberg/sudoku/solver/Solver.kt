@@ -54,25 +54,15 @@ class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
-sealed class Action(val technique: String) {
-    abstract operator fun invoke(game: Game): Game
+fun solve(game: Game) = generateSequence(game, ::applyFirstAction).last()
 
-    class SetValue(private val position: Position, private val value: Char, t: String) : Action(t) {
-        override fun invoke(game: Game) = game.setValueAndEraseMarks(position, value)
-        override fun toString() = "[$technique] $position => $value"
-    }
+private fun applyFirstAction(game: Game) = game.actions().firstOrNull()?.applyTo(game)
 
-    class EraseMarks(private val position: Position, private val marks: Set<Char>, t: String) : Action(t) {
-        override fun invoke(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
-        override fun toString() = "[$technique] $position => erase marks: ${marks.joinToString()}"
-    }
+fun Game.filteredActions(): Sequence<Action> {
+    return ActionSequence(actions())
 }
 
-fun solve(game: Game) = generateSequence(game, ::next).last()
-
-private fun next(game: Game) = game.actions().firstOrNull()?.let { action -> action(game) }
-
-fun Game.actions(): Sequence<Action> = nakedSingles() +
+private fun Game.actions(): Sequence<Action> = nakedSingles() +
         hiddenSingles() +
         nakedTuples(2) +
         hiddenTuples(2) +

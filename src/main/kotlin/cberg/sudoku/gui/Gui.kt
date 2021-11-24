@@ -93,7 +93,7 @@ fun Sudoku(model: Model) {
 
             Hints(
                 actions = model.actions,
-                onClick = model::execute
+                onClick = model::apply
             )
         }
     }
@@ -202,7 +202,7 @@ fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) 
 }
 
 @Composable
-fun Hints(actions: List<Action>, onClick: (Action) -> Unit) {
+fun Hints(actions: Sequence<Action>, onClick: (Action) -> Unit) {
     Column {
         Text(text = "Hints", fontSize = 20.sp)
         for (action in actions) {
