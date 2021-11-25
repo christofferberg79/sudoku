@@ -203,13 +203,17 @@ fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) 
 
 @Composable
 fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
+    val groupedHints = hints.groupBy { hint -> hint.technique }
     Column {
         Text(text = "Hints", fontSize = 20.sp)
-        for (hint in hints) {
-            Column(Modifier.padding(bottom = 10.dp).clickable { onClick(hint) }) {
-                Text("${hint.technique} ${hint.reason}")
-                for (action in hint.actions) {
-                    Text("$action")
+        for ((technique, hintsInTechnique) in groupedHints) {
+            Text(text = "$technique", fontSize = 16.sp)
+            for (hint in hintsInTechnique) {
+                Column(Modifier.padding(bottom = 10.dp).clickable { onClick(hint) }) {
+                    Text("${hint.reason}")
+                    for (action in hint.actions) {
+                        Text("$action")
+                    }
                 }
             }
         }
