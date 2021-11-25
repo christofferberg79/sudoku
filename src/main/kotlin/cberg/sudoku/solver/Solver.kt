@@ -74,13 +74,15 @@ private fun Game.nakedSingles(): Sequence<Hint> = squares.asSequence()
     .map { square ->
         val position = square.position
         val value = square.marks.single()
-        Hint(Action.SetValue(position, value), Technique.NakedSingle(position, value))
+        Hint(Action.SetValue(position, value), Reason(position, value), Technique.NakedSingle)
     }
 
 private fun Game.hiddenSingles(): Sequence<Hint> = groups.flatMap { group ->
     symbols.asSequence().mapNotNull { symbol ->
         group.singleOrNull { position -> symbol in squareAt(position).marks }
-            ?.let { position -> Hint(Action.SetValue(position, symbol), Technique.HiddenSingle(position, symbol)) }
+            ?.let { position ->
+                Hint(Action.SetValue(position, symbol), Reason(position, symbol), Technique.HiddenSingle)
+            }
     }
 }
 
@@ -93,16 +95,13 @@ private fun Game.nakedTuples(n: Int): Sequence<Hint> = groups.flatMap { group ->
         .filter { (_, marks) -> marks.size == n }
         .map { (squares, marks) -> squares.map { square -> square.position } to marks }
         .flatMap { (tuplePositions, tupleMarks) ->
+            val reason = Reason(tuplePositions, tupleMarks)
+            val technique = Technique.NakedTuple(n)
             group.asSequence()
                 .filterNot { position -> position in tuplePositions }
                 .map { position -> position to tupleMarks.intersect(squareAt(position).marks) }
                 .filterNot { (_, marks) -> marks.isEmpty() }
-                .map { (position, marks) ->
-                    Hint(
-                        Action.EraseMarks(position, marks.toSet()),
-                        Technique.NakedTuple(n, tuplePositions, tupleMarks)
-                    )
-                }
+                .map { (position, marks) -> Hint(Action.EraseMarks(position, marks.toSet()), reason, technique) }
         }
 }
 
@@ -115,12 +114,11 @@ private fun Game.hiddenTuples(n: Int): Sequence<Hint> = groups.flatMap { group -
     tuples.associateWith { tuple -> emptySquares.filter { square -> square.marks.any { c -> tuple.contains(c) } } }
         .filterValues { squares -> squares.size == n }
         .flatMap { (tuple, squares) ->
+            val reason = Reason(squares.map { it.position }, tuple)
+            val technique = Technique.HiddenTuple(n)
             squares.map { square -> square.position to square.marks - tuple }
                 .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
-                .map { (position, marksToErase) ->
-                    val technique = Technique.HiddenTuple(n, squares.map { it.position }, tuple)
-                    Hint(Action.EraseMarks(position, marksToErase), technique)
-                }
+                .map { (position, marksToErase) -> Hint(Action.EraseMarks(position, marksToErase), reason, technique) }
         }
 }
 

@@ -207,8 +207,8 @@ fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
         Text(text = "Hints", fontSize = 20.sp)
         for (hint in hints) {
             Column(Modifier.padding(bottom = 10.dp).clickable { onClick(hint) }) {
-                Text(hint.technique.toString())
-                Text(hint.action.toString())
+                Text("${hint.technique} ${hint.reason}")
+                Text("${hint.action}")
             }
         }
     }

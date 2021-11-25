@@ -1,28 +1,20 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.Position
-
 sealed interface Technique {
-    class NakedSingle(private val position: Position, private val value: Char) : Technique {
-        override fun toString() = "Naked Single $value at $position"
+    object NakedSingle : Technique {
+        override fun toString() = "Naked Single"
     }
 
-    class HiddenSingle(private val position: Position, private val value: Char) : Technique {
-        override fun toString() = "Hidden Single $value at $position"
+    object HiddenSingle : Technique {
+        override fun toString() = "Hidden Single"
     }
 
-    class NakedTuple(private val n: Int, private val positions: List<Position>, private val values: Set<Char>) :
-        Technique {
-        override fun toString(): String {
-            return "Naked ${tupleString(n)} $values at $positions"
-        }
+    data class NakedTuple(private val n: Int) : Technique {
+        override fun toString() = "Naked ${tupleString(n)}"
     }
 
-    class HiddenTuple(private val n: Int, private val positions: List<Position>, private val values: Set<Char>) :
-        Technique {
-        override fun toString(): String {
-            return "Naked ${tupleString(n)} $values at $positions"
-        }
+    data class HiddenTuple(private val n: Int) : Technique {
+        override fun toString() = "Hidden ${tupleString(n)}"
     }
 }
 

@@ -2,7 +2,7 @@ package cberg.sudoku.solver
 
 import cberg.sudoku.game.Position
 
-class Hint(val action: Action, val technique: Technique)
+class Hint(val action: Action, val reason: Reason, val technique: Technique)
 
 class HintSequence(private val source: Sequence<Hint>) : Sequence<Hint> {
     override fun iterator(): Iterator<Hint> {
