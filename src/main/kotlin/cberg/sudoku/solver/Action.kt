@@ -5,17 +5,17 @@ import cberg.sudoku.game.Position
 import cberg.sudoku.game.eraseMark
 import cberg.sudoku.game.setValueAndEraseMarks
 
-sealed class Action(val position: Position, val technique: String) {
+sealed class Action(val position: Position, val technique: Technique) {
     abstract fun applyTo(game: Game): Game
 
-    class SetValue(position: Position, val value: Char, t: String) : Action(position, t) {
+    class SetValue(position: Position, val value: Char, technique: Technique) : Action(position, technique) {
         override fun applyTo(game: Game) = game.setValueAndEraseMarks(position, value)
-        override fun toString() = "[$technique] $position => $value"
+        override fun toString() = "$position => set value $value"
     }
 
-    class EraseMarks(position: Position, val marks: Set<Char>, t: String) : Action(position, t) {
+    class EraseMarks(position: Position, val marks: Set<Char>, technique: Technique) : Action(position, technique) {
         override fun applyTo(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
-        override fun toString() = "[$technique] $position => erase marks: ${marks.joinToString()}"
+        override fun toString() = "$position => erase marks ${marks.joinToString()}"
     }
 }
 

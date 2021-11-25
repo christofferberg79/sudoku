@@ -71,12 +71,16 @@ private fun Game.actions(): Sequence<Action> = nakedSingles() +
 
 private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
-    .map { square -> Action.SetValue(square.position, square.marks.single(), "NS") }
+    .map { square ->
+        val position = square.position
+        val value = square.marks.single()
+        Action.SetValue(position, value, Technique.NakedSingle(position, value))
+    }
 
 private fun Game.hiddenSingles(): Sequence<Action> = groups.flatMap { group ->
     symbols.asSequence().mapNotNull { symbol ->
         group.singleOrNull { position -> symbol in squareAt(position).marks }
-            ?.let { position -> Action.SetValue(position, symbol, "HS") }
+            ?.let { position -> Action.SetValue(position, symbol, Technique.HiddenSingle(position, symbol)) }
     }
 }
 
@@ -87,27 +91,33 @@ private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group 
         .let { squares -> tuplesFrom(squares, n) }
         .map { squares -> squares to squares.map { square -> square.marks }.reduce(Set<Char>::plus) }
         .filter { (_, marks) -> marks.size == n }
-        .flatMap { (squares, marks) ->
+        .map { (squares, marks) -> squares.map { square -> square.position } to marks }
+        .flatMap { (tuplePositions, tupleMarks) ->
             group.asSequence()
-                .filterNot { position -> position in squares.map { square -> square.position } }
-                .map { position -> position to marks.intersect(squareAt(position).marks) }
+                .filterNot { position -> position in tuplePositions }
+                .map { position -> position to tupleMarks.intersect(squareAt(position).marks) }
                 .filterNot { (_, marks) -> marks.isEmpty() }
-                .map { (position, marks) -> Action.EraseMarks(position, marks.toSet(), "NT($n)") }
+                .map { (position, marks) ->
+                    Action.EraseMarks(position, marks.toSet(), Technique.NakedTuple(n, tuplePositions, tupleMarks))
+                }
         }
 }
 
 private fun Game.hiddenTuples(n: Int): Sequence<Action> = groups.flatMap { group ->
-    val squares = group
+    val emptySquares = group
         .map { position -> squareAt(position) }
         .filter { square -> square.isEmpty() }
-    val marks = squares.fold(mutableSetOf<Char>()) { marks, square -> marks.apply { addAll(square.marks) } }
+    val marks = emptySquares.fold(mutableSetOf<Char>()) { marks, square -> marks.apply { addAll(square.marks) } }
     val tuples = tuplesFrom(marks.asSequence(), n)
-    tuples.associateWith { tuple -> squares.filter { square -> square.marks.any { c -> tuple.contains(c) } } }
+    tuples.associateWith { tuple -> emptySquares.filter { square -> square.marks.any { c -> tuple.contains(c) } } }
         .filterValues { squares -> squares.size == n }
         .flatMap { (tuple, squares) ->
             squares.map { square -> square.position to square.marks - tuple }
                 .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
-                .map { (position, marksToErase) -> Action.EraseMarks(position, marksToErase, "HP($n)") }
+                .map { (position, marksToErase) ->
+                    val technique = Technique.HiddenTuple(n, squares.map { it.position }, tuple)
+                    Action.EraseMarks(position, marksToErase, technique)
+                }
         }
 }
 

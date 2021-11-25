@@ -206,10 +206,10 @@ fun Hints(actions: Sequence<Action>, onClick: (Action) -> Unit) {
     Column {
         Text(text = "Hints", fontSize = 20.sp)
         for (action in actions) {
-            Text(
-                text = action.toString(),
-                modifier = Modifier.clickable { onClick(action) }
-            )
+            Column(Modifier.padding(bottom = 10.dp).clickable { onClick(action) }) {
+                Text(action.technique.toString())
+                Text(action.toString())
+            }
         }
     }
 }
