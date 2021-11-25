@@ -59,7 +59,7 @@ fun solve(game: Game) = generateSequence(game, ::applyFirstHint).last()
 private fun applyFirstHint(game: Game) = game.hints().firstOrNull()?.applyTo(game)
 
 fun Game.filteredHints(): Sequence<Hint> {
-    return HintSequence(hints())
+    return HintSequence(hints(), this)
 }
 
 private fun Game.hints(): Sequence<Hint> = nakedSingles() +

@@ -14,20 +14,20 @@ data class Hint(val actions: List<Action>, val reason: Reason, val technique: Te
     }
 }
 
-class HintSequence(private val source: Sequence<Hint>) : Sequence<Hint> {
+class HintSequence(private val source: Sequence<Hint>, private val game: Game) : Sequence<Hint> {
     override fun iterator(): Iterator<Hint> {
-        return HintIterator(source.iterator())
+        return HintIterator(source.iterator(), game)
     }
 }
 
-class HintIterator(private val source: Iterator<Hint>) : AbstractIterator<Hint>() {
-    private val observed = mutableListOf<Hint>()
-
+class HintIterator(private val source: Iterator<Hint>, private var game: Game) : AbstractIterator<Hint>() {
     override fun computeNext() {
         while (source.hasNext()) {
             val next = source.next()
 
-            if (add(next)) {
+            val newGame = next.applyTo(game)
+            if (newGame != game) {
+                game = newGame
                 setNext(next)
                 return
             }
@@ -36,15 +36,4 @@ class HintIterator(private val source: Iterator<Hint>) : AbstractIterator<Hint>(
         done()
     }
 
-    private fun add(hint: Hint): Boolean {
-        val relevant = hint.actions.any { action ->
-            observed.none { otherHint->
-                otherHint.actions.any { otherAction -> otherAction covers action }
-            }
-        }
-        if (relevant) {
-            observed += hint
-        }
-        return relevant
-    }
 }
