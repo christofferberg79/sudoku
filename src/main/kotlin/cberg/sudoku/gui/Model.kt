@@ -76,6 +76,6 @@ class Model(input: String) {
     }
 
     fun startNewGame(gameString: String) = updateGame {
-        Game(gameString)
+        Game(gameString).writePencilMarks()
     }
 }
