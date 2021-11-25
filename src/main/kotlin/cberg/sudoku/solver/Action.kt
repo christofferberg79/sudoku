@@ -5,15 +5,15 @@ import cberg.sudoku.game.Position
 import cberg.sudoku.game.eraseMark
 import cberg.sudoku.game.setValueAndEraseMarks
 
-sealed class Action(val technique: String) {
+sealed class Action(val position: Position, val technique: String) {
     abstract fun applyTo(game: Game): Game
 
-    class SetValue(val position: Position, val value: Char, t: String) : Action(t) {
+    class SetValue(position: Position, val value: Char, t: String) : Action(position, t) {
         override fun applyTo(game: Game) = game.setValueAndEraseMarks(position, value)
         override fun toString() = "[$technique] $position => $value"
     }
 
-    class EraseMarks(val position: Position, val marks: Set<Char>, t: String) : Action(t) {
+    class EraseMarks(position: Position, val marks: Set<Char>, t: String) : Action(position, t) {
         override fun applyTo(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
         override fun toString() = "[$technique] $position => erase marks: ${marks.joinToString()}"
     }
@@ -26,7 +26,7 @@ class ActionSequence(private val source: Sequence<Action>) : Sequence<Action> {
 }
 
 class ActionIterator(private val source: Iterator<Action>) : AbstractIterator<Action>() {
-    private val observed = mutableListOf<Action>()
+    private val observed = mutableMapOf<Position, MutableList<Action>>()
 
     override fun computeNext() {
         while (source.hasNext()) {
@@ -42,24 +42,28 @@ class ActionIterator(private val source: Iterator<Action>) : AbstractIterator<Ac
     }
 
     private fun add(action: Action): Boolean {
-        val relevant = observed.none { previousAction ->
-            when (previousAction) {
-                is Action.SetValue -> {
-                    when (action) {
-                        is Action.SetValue -> previousAction.position == action.position
-                        is Action.EraseMarks -> previousAction.position == action.position
-                    }
-
-                }
-                is Action.EraseMarks -> {
-                    check(action is Action.EraseMarks)
-                    previousAction.position == action.position && previousAction.marks.all { it in action.marks }
-                }
-            }
-        }
+        val observedAtPosition = observed.getOrPut(action.position, ::mutableListOf)
+        val relevant = observedAtPosition.none { previousAction -> previousAction covers action }
         if (relevant) {
-            observed += action
+            observedAtPosition.add(action)
         }
         return relevant
+    }
+
+}
+
+private infix fun Action.covers(action: Action): Boolean {
+    check(this.position == action.position)
+    return when (this) {
+        is Action.SetValue -> {
+            when (action) {
+                is Action.SetValue -> value == action.value
+                is Action.EraseMarks -> true
+            }
+        }
+        is Action.EraseMarks -> {
+            check(action is Action.EraseMarks)
+            marks.all { c -> c in action.marks }
+        }
     }
 }
