@@ -67,8 +67,7 @@ class Model(input: String) {
     }
 
     fun solve() = updateGame {
-        val gameWithMarks = writePencilMarks()
-        solve(gameWithMarks)
+        solve(this)
     }
 
     fun apply(action: Action) = updateGame {
