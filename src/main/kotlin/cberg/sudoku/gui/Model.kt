@@ -4,8 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cberg.sudoku.game.*
-import cberg.sudoku.solver.Action
-import cberg.sudoku.solver.filteredActions
+import cberg.sudoku.solver.Hint
+import cberg.sudoku.solver.filteredHints
 import cberg.sudoku.solver.solve
 
 data class Settings(
@@ -20,7 +20,7 @@ class Model(input: String) {
     var settings by mutableStateOf(Settings())
         private set
 
-    var actions by mutableStateOf(game.filteredActions())
+    var hints by mutableStateOf(game.filteredHints())
         private set
 
     var gameStatus by mutableStateOf(game.getStatus())
@@ -28,7 +28,7 @@ class Model(input: String) {
 
     private inline fun updateGame(update: Game.() -> Game) {
         game = game.update()
-        actions = game.filteredActions()
+        hints = game.filteredHints()
         gameStatus = game.getStatus()
     }
 
@@ -70,8 +70,8 @@ class Model(input: String) {
         solve(this)
     }
 
-    fun apply(action: Action) = updateGame {
-        action.applyTo(game)
+    fun apply(hint: Hint) = updateGame {
+        hint.action.applyTo(game)
     }
 
     fun startNewGame(gameString: String) = updateGame {

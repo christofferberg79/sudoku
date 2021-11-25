@@ -54,37 +54,37 @@ class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
-fun solve(game: Game) = generateSequence(game, ::applyFirstAction).last()
+fun solve(game: Game) = generateSequence(game, ::applyFirstHint).last()
 
-private fun applyFirstAction(game: Game) = game.actions().firstOrNull()?.applyTo(game)
+private fun applyFirstHint(game: Game) = game.hints().firstOrNull()?.action?.applyTo(game)
 
-fun Game.filteredActions(): Sequence<Action> {
-    return ActionSequence(actions())
+fun Game.filteredHints(): Sequence<Hint> {
+    return HintSequence(hints())
 }
 
-private fun Game.actions(): Sequence<Action> = nakedSingles() +
+private fun Game.hints(): Sequence<Hint> = nakedSingles() +
         hiddenSingles() +
         nakedTuples(2) +
         hiddenTuples(2) +
         nakedTuples(3) +
         hiddenTuples(3)
 
-private fun Game.nakedSingles(): Sequence<Action> = squares.asSequence()
+private fun Game.nakedSingles(): Sequence<Hint> = squares.asSequence()
     .filter { square -> square.marks.size == 1 }
     .map { square ->
         val position = square.position
         val value = square.marks.single()
-        Action.SetValue(position, value, Technique.NakedSingle(position, value))
+        Hint(Action.SetValue(position, value), Technique.NakedSingle(position, value))
     }
 
-private fun Game.hiddenSingles(): Sequence<Action> = groups.flatMap { group ->
+private fun Game.hiddenSingles(): Sequence<Hint> = groups.flatMap { group ->
     symbols.asSequence().mapNotNull { symbol ->
         group.singleOrNull { position -> symbol in squareAt(position).marks }
-            ?.let { position -> Action.SetValue(position, symbol, Technique.HiddenSingle(position, symbol)) }
+            ?.let { position -> Hint(Action.SetValue(position, symbol), Technique.HiddenSingle(position, symbol)) }
     }
 }
 
-private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group ->
+private fun Game.nakedTuples(n: Int): Sequence<Hint> = groups.flatMap { group ->
     group.asSequence()
         .map { position -> squareAt(position) }
         .filter { square -> square.isEmpty() }
@@ -98,12 +98,15 @@ private fun Game.nakedTuples(n: Int): Sequence<Action> = groups.flatMap { group 
                 .map { position -> position to tupleMarks.intersect(squareAt(position).marks) }
                 .filterNot { (_, marks) -> marks.isEmpty() }
                 .map { (position, marks) ->
-                    Action.EraseMarks(position, marks.toSet(), Technique.NakedTuple(n, tuplePositions, tupleMarks))
+                    Hint(
+                        Action.EraseMarks(position, marks.toSet()),
+                        Technique.NakedTuple(n, tuplePositions, tupleMarks)
+                    )
                 }
         }
 }
 
-private fun Game.hiddenTuples(n: Int): Sequence<Action> = groups.flatMap { group ->
+private fun Game.hiddenTuples(n: Int): Sequence<Hint> = groups.flatMap { group ->
     val emptySquares = group
         .map { position -> squareAt(position) }
         .filter { square -> square.isEmpty() }
@@ -116,7 +119,7 @@ private fun Game.hiddenTuples(n: Int): Sequence<Action> = groups.flatMap { group
                 .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
                 .map { (position, marksToErase) ->
                     val technique = Technique.HiddenTuple(n, squares.map { it.position }, tuple)
-                    Action.EraseMarks(position, marksToErase, technique)
+                    Hint(Action.EraseMarks(position, marksToErase), technique)
                 }
         }
 }

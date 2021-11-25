@@ -23,7 +23,7 @@ import cberg.sudoku.game.GameStatus
 import cberg.sudoku.game.Position
 import cberg.sudoku.game.Square
 import cberg.sudoku.game.isEmpty
-import cberg.sudoku.solver.Action
+import cberg.sudoku.solver.Hint
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
     Box(
@@ -92,7 +92,7 @@ fun Sudoku(model: Model) {
             }
 
             Hints(
-                actions = model.actions,
+                hints = model.hints,
                 onClick = model::apply
             )
         }
@@ -202,13 +202,13 @@ fun Setting(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) 
 }
 
 @Composable
-fun Hints(actions: Sequence<Action>, onClick: (Action) -> Unit) {
+fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
     Column {
         Text(text = "Hints", fontSize = 20.sp)
-        for (action in actions) {
-            Column(Modifier.padding(bottom = 10.dp).clickable { onClick(action) }) {
-                Text(action.technique.toString())
-                Text(action.toString())
+        for (hint in hints) {
+            Column(Modifier.padding(bottom = 10.dp).clickable { onClick(hint) }) {
+                Text(hint.technique.toString())
+                Text(hint.action.toString())
             }
         }
     }
