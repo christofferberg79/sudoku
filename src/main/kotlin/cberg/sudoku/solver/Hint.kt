@@ -1,8 +1,18 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.Position
+import cberg.sudoku.game.Game
 
-class Hint(val action: Action, val reason: Reason, val technique: Technique)
+data class Hint(val actions: List<Action>, val reason: Reason, val technique: Technique) {
+    constructor(action: Action, reason: Reason, technique: Technique) : this(listOf(action), reason, technique)
+
+    init {
+        require(actions.isNotEmpty())
+    }
+
+    fun applyTo(game: Game) = actions.fold(game) { nextGame, action ->
+        action.applyTo(nextGame)
+    }
+}
 
 class HintSequence(private val source: Sequence<Hint>) : Sequence<Hint> {
     override fun iterator(): Iterator<Hint> {
@@ -11,7 +21,7 @@ class HintSequence(private val source: Sequence<Hint>) : Sequence<Hint> {
 }
 
 class HintIterator(private val source: Iterator<Hint>) : AbstractIterator<Hint>() {
-    private val observed = mutableMapOf<Position, MutableList<Hint>>()
+    private val observed = mutableListOf<Hint>()
 
     override fun computeNext() {
         while (source.hasNext()) {
@@ -27,14 +37,14 @@ class HintIterator(private val source: Iterator<Hint>) : AbstractIterator<Hint>(
     }
 
     private fun add(hint: Hint): Boolean {
-        val observedAtPosition = observed.getOrPut(hint.action.position, ::mutableListOf)
-        val relevant = observedAtPosition.none { previousHint -> previousHint covers hint }
+        val relevant = hint.actions.any { action ->
+            observed.none { otherHint->
+                otherHint.actions.any { otherAction -> otherAction covers action }
+            }
+        }
         if (relevant) {
-            observedAtPosition.add(hint)
+            observed += hint
         }
         return relevant
     }
-
 }
-
-private infix fun Hint.covers(hint: Hint) = action covers hint.action

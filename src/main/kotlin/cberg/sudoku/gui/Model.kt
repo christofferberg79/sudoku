@@ -71,7 +71,7 @@ class Model(input: String) {
     }
 
     fun apply(hint: Hint) = updateGame {
-        hint.action.applyTo(game)
+        hint.applyTo(game)
     }
 
     fun startNewGame(gameString: String) = updateGame {

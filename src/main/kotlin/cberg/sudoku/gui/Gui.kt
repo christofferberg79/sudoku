@@ -31,7 +31,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         contentAlignment = Alignment.Center
     ) {
         val model = remember {
-            Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
+            Model("..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65")
         }
         Sudoku(model)
     }
@@ -208,7 +208,9 @@ fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
         for (hint in hints) {
             Column(Modifier.padding(bottom = 10.dp).clickable { onClick(hint) }) {
                 Text("${hint.technique} ${hint.reason}")
-                Text("${hint.action}")
+                for (action in hint.actions) {
+                    Text("$action")
+                }
             }
         }
     }

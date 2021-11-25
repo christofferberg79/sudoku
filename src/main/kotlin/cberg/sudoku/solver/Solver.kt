@@ -56,7 +56,7 @@ object TooHard : Solution()
 
 fun solve(game: Game) = generateSequence(game, ::applyFirstHint).last()
 
-private fun applyFirstHint(game: Game) = game.hints().firstOrNull()?.action?.applyTo(game)
+private fun applyFirstHint(game: Game) = game.hints().firstOrNull()?.applyTo(game)
 
 fun Game.filteredHints(): Sequence<Hint> {
     return HintSequence(hints())
@@ -93,15 +93,19 @@ private fun Game.nakedTuples(n: Int): Sequence<Hint> = groups.flatMap { group ->
         .let { squares -> tuplesFrom(squares, n) }
         .map { squares -> squares to squares.map { square -> square.marks }.reduce(Set<Char>::plus) }
         .filter { (_, marks) -> marks.size == n }
-        .map { (squares, marks) -> squares.map { square -> square.position } to marks }
-        .flatMap { (tuplePositions, tupleMarks) ->
-            val reason = Reason(tuplePositions, tupleMarks)
-            val technique = Technique.NakedTuple(n)
-            group.asSequence()
-                .filterNot { position -> position in tuplePositions }
-                .map { position -> position to tupleMarks.intersect(squareAt(position).marks) }
+        .map { (squares, marks) -> Reason(squares.map { square -> square.position }, marks) }
+        .mapNotNull { reason ->
+            val actions = group.asSequence()
+                .filterNot { position -> position in reason.positions }
+                .map { position -> position to reason.marks.intersect(squareAt(position).marks) }
                 .filterNot { (_, marks) -> marks.isEmpty() }
-                .map { (position, marks) -> Hint(Action.EraseMarks(position, marks.toSet()), reason, technique) }
+                .map { (position, marks) -> Action.EraseMarks(position, marks.toSet()) }
+                .toList()
+            if (actions.isEmpty()) {
+                null
+            } else {
+                Hint(actions, reason, Technique.NakedTuple(n))
+            }
         }
 }
 
@@ -113,12 +117,17 @@ private fun Game.hiddenTuples(n: Int): Sequence<Hint> = groups.flatMap { group -
     val tuples = tuplesFrom(marks.asSequence(), n)
     tuples.associateWith { tuple -> emptySquares.filter { square -> square.marks.any { c -> tuple.contains(c) } } }
         .filterValues { squares -> squares.size == n }
-        .flatMap { (tuple, squares) ->
+        .mapNotNull { (tuple, squares) ->
             val reason = Reason(squares.map { it.position }, tuple)
             val technique = Technique.HiddenTuple(n)
-            squares.map { square -> square.position to square.marks - tuple }
+            val actions = squares.map { square -> square.position to square.marks - tuple }
                 .filterNot { (_, marksToErase) -> marksToErase.isEmpty() }
-                .map { (position, marksToErase) -> Hint(Action.EraseMarks(position, marksToErase), reason, technique) }
+                .map { (position, marksToErase) -> Action.EraseMarks(position, marksToErase) }
+            if (actions.isEmpty()) {
+                null
+            } else {
+                Hint(actions, reason, technique)
+            }
         }
 }
 
