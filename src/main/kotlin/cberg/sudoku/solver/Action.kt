@@ -23,24 +23,3 @@ sealed interface Action {
         override fun toString() = "$position => erase marks ${marks.joinToString()}"
     }
 }
-
-infix fun Action.covers(action: Action): Boolean {
-    if (this.position != action.position) {
-        return false
-    }
-
-    return when (this) {
-        is Action.SetValue -> {
-            when (action) {
-                is Action.SetValue -> value == action.value
-                is Action.EraseMarks -> true
-            }
-        }
-        is Action.EraseMarks -> {
-            when (action) {
-                is Action.EraseMarks -> marks.all { c -> c in action.marks }
-                is Action.SetValue -> false
-            }
-        }
-    }
-}
