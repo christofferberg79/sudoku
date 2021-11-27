@@ -2,6 +2,7 @@ package cberg.sudoku.gui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Switch
@@ -13,6 +14,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.Dp
@@ -109,7 +111,7 @@ fun Game(
     Box(modifier = dim.gameModifier().background(Color.Black)) {
         for (square in squares) {
             Square(
-                modifier = dim.squareModifier(square.position).background(Color.White),
+                modifier = dim.squareModifier(square.position),
                 square = square,
                 onType = { char -> onType(square.position, char) },
                 onDelete = { onDelete(square.position) }
@@ -126,10 +128,14 @@ fun Square(
     onDelete: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
+    var isFocused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
+            .background(if (isFocused) Color.LightGray else Color.White)
             .focusRequester(focusRequester)
-            .clickable { focusRequester.requestFocus() }
+            .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
+            .clickable(interactionSource, indication = null) { focusRequester.requestFocus() }
             .onKeyEvent { event ->
                 when (val input = event.toSquareInput()) {
                     is SquareInput.Value -> onType(input.value)
