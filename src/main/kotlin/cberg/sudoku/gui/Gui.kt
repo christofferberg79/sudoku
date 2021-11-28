@@ -1,5 +1,6 @@
 package cberg.sudoku.gui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,14 +18,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
-import cberg.sudoku.game.GameStatus
-import cberg.sudoku.game.Position
-import cberg.sudoku.game.Square
-import cberg.sudoku.game.isEmpty
+import cberg.sudoku.game.*
 import cberg.sudoku.solver.Hint
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
@@ -39,16 +36,6 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
     }
 }
 
-class GameDimensions(private val square: Dp, private val thinLine: Dp, private val thickLine: Dp) {
-    private fun gameSize() = thickLine * 4 + thinLine * 6 + square * 9
-    private fun squareOffset(i: Int) = thickLine + (square + thinLine) * i + (thickLine - thinLine) * (i / 3)
-
-    fun gameModifier() = Modifier.size(gameSize())
-    fun squareModifier(position: Position) = Modifier
-        .size(square)
-        .offset(squareOffset(position.col), squareOffset(position.row))
-}
-
 @Composable
 fun Sudoku(model: Model) {
     val game = model.game
@@ -57,7 +44,7 @@ fun Sudoku(model: Model) {
     Row {
         Column {
             Game(
-                squares = game.squares,
+                game = game,
                 onType = model::writeChar,
                 onDelete = model::erase
             )
@@ -103,19 +90,48 @@ fun Sudoku(model: Model) {
 
 @Composable
 fun Game(
-    squares: List<Square>,
+    game: Game,
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
 ) {
-    val dim = GameDimensions(square = 50.dp, thinLine = 1.5.dp, thickLine = 3.dp)
-    Box(modifier = dim.gameModifier().background(Color.Black)) {
-        for (square in squares) {
-            Square(
-                modifier = dim.squareModifier(square.position),
-                square = square,
-                onType = { char -> onType(square.position, char) },
-                onDelete = { onDelete(square.position) }
-            )
+    SudokuGrid(
+        thickLine = BorderStroke(3.dp, Color.Black),
+        thinLine = BorderStroke(1.dp, Color.Gray)
+    ) { row, col ->
+        val square = game.squareAt(Position(row, col))
+        Square(
+            modifier = Modifier.size(50.dp),
+            square = square,
+            onType = { char -> onType(square.position, char) },
+            onDelete = { onDelete(square.position) }
+        )
+    }
+}
+
+@Composable
+private fun SudokuGrid(
+    thickLine: BorderStroke,
+    thinLine: BorderStroke,
+    content: @Composable (row: Int, col: Int) -> Unit
+) {
+    Box(Modifier.background(thickLine.brush).padding(thickLine.width)) {
+        Grid(thickLine) { outerRow, outerCol ->
+            Grid(thinLine) { innerRow, innerCol ->
+                content(outerRow * 3 + innerRow, outerCol * 3 + innerCol)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Grid(line: BorderStroke, content: @Composable (row: Int, col: Int) -> Unit) {
+    Column(Modifier.background(line.brush), verticalArrangement = Arrangement.spacedBy(line.width)) {
+        repeat(3) { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(line.width)) {
+                repeat(3) { col ->
+                    content(row, col)
+                }
+            }
         }
     }
 }
