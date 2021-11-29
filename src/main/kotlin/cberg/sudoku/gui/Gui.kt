@@ -13,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusOrder
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,16 +97,20 @@ fun Game(
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
 ) {
+    val squares = game.squares.associateBy { square -> square.position }
+    val focusRequesters = remember { squares.keys.associateWith { FocusRequester() } }
+
     SudokuGrid(
         size = 468.dp,
         thickLine = BorderStroke(2.dp, Color.Black),
         thinLine = BorderStroke(1.dp, Color.Gray)
     ) { row, col ->
-        val square = game.squareAt(Position(row, col))
+        val position = Position(row, col)
         Square(
-            square = square,
-            onType = { char -> onType(square.position, char) },
-            onDelete = { onDelete(square.position) }
+            square = squares.getValue(position),
+            focusRequesters = focusRequesters,
+            onType = { char -> onType(position, char) },
+            onDelete = { onDelete(position) }
         )
     }
 }
@@ -146,22 +152,30 @@ private fun Grid(
 @Composable
 fun Square(
     square: Square,
+    focusRequesters: Map<Position, FocusRequester>,
     onType: (Char) -> Unit,
     onDelete: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
+    val focusRequester = focusRequesters.getValue(square.position)
+    val focusManager = LocalFocusManager.current
     Box(
         modifier = Modifier
             .background(if (isFocused) Color.LightGray else Color.White)
-            .focusRequester(focusRequester)
+            .focusOrder(focusRequester) {
+                up = focusRequesters.getValue(square.position.up())
+                down = focusRequesters.getValue(square.position.down())
+                left = focusRequesters.getValue(square.position.left())
+                right = focusRequesters.getValue(square.position.right())
+            }
             .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
             .clickable(interactionSource, indication = null) { focusRequester.requestFocus() }
             .onKeyEvent { event ->
                 when (val input = event.toSquareInput()) {
                     is SquareInput.Value -> onType(input.value)
                     is SquareInput.Delete -> onDelete()
+                    is SquareInput.Move -> focusManager.moveFocus(input.direction)
                     else -> return@onKeyEvent false
                 }
                 return@onKeyEvent true
@@ -248,19 +262,24 @@ fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
 private sealed class SquareInput {
     object Delete : SquareInput()
     data class Value(val value: Char) : SquareInput()
+    data class Move(val direction: FocusDirection) : SquareInput()
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun KeyEvent.toSquareInput(): SquareInput? {
-    if (type != KeyEventType.KeyDown) {
-        return null
+    when {
+        type != KeyEventType.KeyDown -> return null
+        key == Key.Delete || key == Key.Backspace -> return SquareInput.Delete
+        key == Key.DirectionUp -> return SquareInput.Move(FocusDirection.Up)
+        key == Key.DirectionDown -> return SquareInput.Move(FocusDirection.Down)
+        key == Key.DirectionLeft -> return SquareInput.Move(FocusDirection.Left)
+        key == Key.DirectionRight -> return SquareInput.Move(FocusDirection.Right)
+        else -> {
+            val char = utf16CodePoint.toChar()
+            if (char in '1'..'9') {
+                return SquareInput.Value(char)
+            }
+            return null
+        }
     }
-    if (key == Key.Delete || key == Key.Backspace) {
-        return SquareInput.Delete
-    }
-    val char = utf16CodePoint.toChar()
-    if (char in '1'..'9') {
-        return SquareInput.Value(char)
-    }
-    return null
 }
