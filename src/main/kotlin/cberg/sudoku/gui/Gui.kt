@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.singleWindowApplication
@@ -26,7 +27,7 @@ import cberg.sudoku.solver.Hint
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(10.dp),
         contentAlignment = Alignment.Center
     ) {
         val model = remember {
@@ -95,12 +96,12 @@ fun Game(
     onDelete: (Position) -> Unit
 ) {
     SudokuGrid(
-        thickLine = BorderStroke(3.dp, Color.Black),
+        size = 468.dp,
+        thickLine = BorderStroke(2.dp, Color.Black),
         thinLine = BorderStroke(1.dp, Color.Gray)
     ) { row, col ->
         val square = game.squareAt(Position(row, col))
         Square(
-            modifier = Modifier.size(50.dp),
             square = square,
             onType = { char -> onType(square.position, char) },
             onDelete = { onDelete(square.position) }
@@ -110,11 +111,12 @@ fun Game(
 
 @Composable
 private fun SudokuGrid(
+    size: Dp,
     thickLine: BorderStroke,
     thinLine: BorderStroke,
     content: @Composable (row: Int, col: Int) -> Unit
 ) {
-    Box(Modifier.background(thickLine.brush).padding(thickLine.width)) {
+    Box(Modifier.size(size).background(thickLine.brush).padding(thickLine.width)) {
         Grid(thickLine) { outerRow, outerCol ->
             Grid(thinLine) { innerRow, innerCol ->
                 content(outerRow * 3 + innerRow, outerCol * 3 + innerCol)
@@ -124,12 +126,17 @@ private fun SudokuGrid(
 }
 
 @Composable
-private fun Grid(line: BorderStroke, content: @Composable (row: Int, col: Int) -> Unit) {
+private fun Grid(
+    line: BorderStroke = BorderStroke(0.dp, Color.Transparent),
+    content: @Composable (row: Int, col: Int) -> Unit
+) {
     Column(Modifier.background(line.brush), verticalArrangement = Arrangement.spacedBy(line.width)) {
         repeat(3) { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(line.width)) {
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(line.width)) {
                 repeat(3) { col ->
-                    content(row, col)
+                    Box(Modifier.weight(1f)) {
+                        content(row, col)
+                    }
                 }
             }
         }
@@ -138,7 +145,6 @@ private fun Grid(line: BorderStroke, content: @Composable (row: Int, col: Int) -
 
 @Composable
 fun Square(
-    modifier: Modifier,
     square: Square,
     onType: (Char) -> Unit,
     onDelete: () -> Unit
@@ -147,7 +153,7 @@ fun Square(
     var isFocused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     Box(
-        modifier = modifier
+        modifier = Modifier
             .background(if (isFocused) Color.LightGray else Color.White)
             .focusRequester(focusRequester)
             .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
@@ -160,6 +166,7 @@ fun Square(
                 }
                 return@onKeyEvent true
             }
+            .padding(1.dp)
     ) {
         if (square.isEmpty()) {
             SquareMarks(square)
@@ -171,19 +178,15 @@ fun Square(
 
 @Composable
 fun SquareMarks(square: Square) {
-    Column(Modifier.fillMaxSize().padding(1.dp)) {
-        for (row in 0..2) {
-            Row(Modifier.fillMaxWidth().weight(1f)) {
-                for (col in 0..2) {
-                    val c = '1' + row * 3 + col
-                    Box(Modifier.weight(1f).fillMaxSize()) {
-                        Text(
-                            modifier = Modifier.align(Alignment.Center),
-                            text = if (c in square.marks) "$c" else "",
-                            fontSize = 14.sp
-                        )
-                    }
-                }
+    Grid { row, col ->
+        val c = '1' + row * 3 + col
+        if (c in square.marks) {
+            Box(Modifier.fillMaxSize()) {
+                Text(
+                    modifier = Modifier.align(Alignment.Center),
+                    text = "$c",
+                    fontSize = 14.sp
+                )
             }
         }
     }
