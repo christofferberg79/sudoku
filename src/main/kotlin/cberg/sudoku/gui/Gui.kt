@@ -97,8 +97,9 @@ fun Game(
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
 ) {
-    val squares = game.squares.associateBy { square -> square.position }
-    val focusRequesters = remember { squares.keys.associateWith { FocusRequester() } }
+    val focusRequesters = remember { game.squares.associate { square -> square.position to FocusRequester() } }
+    val interactionSource = remember { MutableInteractionSource() }
+    val focusManager = LocalFocusManager.current
 
     SudokuGrid(
         size = 468.dp,
@@ -106,11 +107,30 @@ fun Game(
         thinLine = BorderStroke(1.dp, Color.Gray)
     ) { row, col ->
         val position = Position(row, col)
+        val focusRequester = focusRequesters.getValue(position)
+        var isFocused by remember { mutableStateOf(false) }
         Square(
-            square = squares.getValue(position),
-            focusRequesters = focusRequesters,
-            onType = { char -> onType(position, char) },
-            onDelete = { onDelete(position) }
+            modifier = Modifier
+                .focusOrder(focusRequester) {
+                    up = focusRequesters.getValue(position.up())
+                    down = focusRequesters.getValue(position.down())
+                    left = focusRequesters.getValue(position.left())
+                    right = focusRequesters.getValue(position.right())
+                }
+                .background(if (isFocused) Color.LightGray else Color.White)
+                .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
+                .clickable(interactionSource, indication = null) { focusRequester.requestFocus() }
+                .onKeyEvent { event ->
+                    when (val input = event.toSquareInput()) {
+                        is SquareInput.Value -> onType(position, input.value)
+                        is SquareInput.Delete -> onDelete(position)
+                        is SquareInput.Move -> focusManager.moveFocus(input.direction)
+                        else -> return@onKeyEvent false
+                    }
+                    return@onKeyEvent true
+                }
+                .padding(1.dp),
+            square = game.squareAt(position)
         )
     }
 }
@@ -151,37 +171,10 @@ private fun Grid(
 
 @Composable
 fun Square(
+    modifier: Modifier = Modifier,
     square: Square,
-    focusRequesters: Map<Position, FocusRequester>,
-    onType: (Char) -> Unit,
-    onDelete: () -> Unit
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val focusRequester = focusRequesters.getValue(square.position)
-    val focusManager = LocalFocusManager.current
-    Box(
-        modifier = Modifier
-            .background(if (isFocused) Color.LightGray else Color.White)
-            .focusOrder(focusRequester) {
-                up = focusRequesters.getValue(square.position.up())
-                down = focusRequesters.getValue(square.position.down())
-                left = focusRequesters.getValue(square.position.left())
-                right = focusRequesters.getValue(square.position.right())
-            }
-            .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
-            .clickable(interactionSource, indication = null) { focusRequester.requestFocus() }
-            .onKeyEvent { event ->
-                when (val input = event.toSquareInput()) {
-                    is SquareInput.Value -> onType(input.value)
-                    is SquareInput.Delete -> onDelete()
-                    is SquareInput.Move -> focusManager.moveFocus(input.direction)
-                    else -> return@onKeyEvent false
-                }
-                return@onKeyEvent true
-            }
-            .padding(1.dp)
-    ) {
+    Box(modifier) {
         if (square.isEmpty()) {
             SquareMarks(square)
         } else {
