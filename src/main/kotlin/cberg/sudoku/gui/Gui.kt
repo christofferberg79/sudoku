@@ -129,6 +129,7 @@ fun Game(
                     }
                     return@onKeyEvent true
                 }
+                .fillMaxSize()
                 .padding(1.dp),
             square = game.squareAt(position)
         )
@@ -140,7 +141,7 @@ private fun SudokuGrid(
     size: Dp,
     thickLine: BorderStroke,
     thinLine: BorderStroke,
-    content: @Composable (row: Int, col: Int) -> Unit
+    content: @Composable BoxScope.(row: Int, col: Int) -> Unit
 ) {
     Box(Modifier.size(size).background(thickLine.brush).padding(thickLine.width)) {
         Grid(thickLine) { outerRow, outerCol ->
@@ -154,7 +155,7 @@ private fun SudokuGrid(
 @Composable
 private fun Grid(
     line: BorderStroke = BorderStroke(0.dp, Color.Transparent),
-    content: @Composable (row: Int, col: Int) -> Unit
+    content: @Composable BoxScope.(row: Int, col: Int) -> Unit
 ) {
     Column(Modifier.background(line.brush), verticalArrangement = Arrangement.spacedBy(line.width)) {
         repeat(3) { row ->
@@ -170,10 +171,7 @@ private fun Grid(
 }
 
 @Composable
-fun Square(
-    modifier: Modifier = Modifier,
-    square: Square,
-) {
+fun Square(modifier: Modifier = Modifier, square: Square) {
     Box(modifier) {
         if (square.isEmpty()) {
             SquareMarks(square)
@@ -188,27 +186,23 @@ fun SquareMarks(square: Square) {
     Grid { row, col ->
         val c = '1' + row * 3 + col
         if (c in square.marks) {
-            Box(Modifier.fillMaxSize()) {
-                Text(
-                    modifier = Modifier.align(Alignment.Center),
-                    text = "$c",
-                    fontSize = 14.sp
-                )
-            }
+            Text(
+                modifier = Modifier.align(Alignment.Center),
+                text = "$c",
+                fontSize = 14.sp
+            )
         }
     }
 }
 
 @Composable
-fun SquareValue(square: Square) {
-    Box(Modifier.fillMaxSize()) {
-        Text(
-            text = "${square.value}",
-            modifier = Modifier.align(Alignment.Center),
-            fontSize = 40.sp,
-            color = if (square.given) Color.Black else Color.Blue
-        )
-    }
+fun BoxScope.SquareValue(square: Square) {
+    Text(
+        text = "${square.value}",
+        modifier = Modifier.align(Alignment.Center),
+        fontSize = 40.sp,
+        color = if (square.given) Color.Black else Color.Blue
+    )
 }
 
 @Composable
