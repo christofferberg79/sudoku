@@ -19,6 +19,8 @@ import androidx.compose.ui.focus.focusOrder
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,15 +29,10 @@ import cberg.sudoku.game.*
 import cberg.sudoku.solver.Hint
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
-    Box(
-        modifier = Modifier.fillMaxSize().padding(10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        val model = remember {
-            Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
-        }
-        Sudoku(model)
+    val model = remember {
+        Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
     }
+    Sudoku(model)
 }
 
 @Composable
@@ -43,68 +40,74 @@ fun Sudoku(model: Model) {
     val game = model.game
     val settings = model.settings
 
-    Row(modifier = Modifier.onKeyEvent { event ->
-        val char = event.key.toSudokuChar()
-        if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Game.symbols) {
-            checkNotNull(char)
-            model.analyze(char)
-            return@onKeyEvent true
-        }
-        return@onKeyEvent false
-    }) {
-        Column {
+    Column(
+        modifier = Modifier
+            .padding(10.dp)
+            .onKeyEvent { event ->
+                val char = event.key.toSudokuChar()
+                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Game.symbols) {
+                    checkNotNull(char)
+                    model.analyze(char)
+                    return@onKeyEvent true
+                }
+                return@onKeyEvent false
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Game(
                 game = game,
                 analyzing = model.analyzing,
                 onType = model::writeChar,
                 onDelete = model::erase
             )
-            NewGame(onNewGame = model::startNewGame)
-        }
 
-        Column(Modifier.padding(10.dp)) {
-            Text(
-                text = when (model.gameStatus) {
-                    GameStatus.NotDone -> "Not Done"
-                    GameStatus.IncorrectSolution -> "Incorrect"
-                    GameStatus.CorrectSolution -> "Correct"
+            Column {
+                Text(
+                    text = when (model.gameStatus) {
+                        GameStatus.NotDone -> "Not Done"
+                        GameStatus.IncorrectSolution -> "Incorrect"
+                        GameStatus.CorrectSolution -> "Correct"
+                    }
+                )
+
+                Text(
+                    text = "Analyzing: ${model.analyzing ?: "none"}",
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+
+                Setting(
+                    text = "Pencil marks",
+                    checked = settings.pencil,
+                    onCheckedChange = { model.togglePencil() }
+                )
+
+                Setting(
+                    text = "Auto-erase pencil marks",
+                    checked = settings.autoErasePencilMarks,
+                    onCheckedChange = { model.toggleAutoErasePencilMarks() }
+                )
+
+                Button(onClick = model::writePencilMarks) {
+                    Text("Write pencil marks")
                 }
-            )
 
-            Text(
-                text = "Analyzing: ${model.analyzing ?: "none"}",
-                modifier = Modifier.padding(top = 10.dp)
-            )
+                Button(onClick = model::reset) {
+                    Text("Reset")
+                }
 
-            Setting(
-                text = "Pencil marks",
-                checked = settings.pencil,
-                onCheckedChange = { model.togglePencil() }
-            )
+                Button(onClick = model::solve) {
+                    Text("Solve")
+                }
 
-            Setting(
-                text = "Auto-erase pencil marks",
-                checked = settings.autoErasePencilMarks,
-                onCheckedChange = { model.toggleAutoErasePencilMarks() }
-            )
-
-            Button(onClick = model::writePencilMarks) {
-                Text("Write pencil marks")
+                Hints(
+                    hints = model.hints,
+                    onClick = model::apply
+                )
             }
-
-            Button(onClick = model::reset) {
-                Text("Reset")
-            }
-
-            Button(onClick = model::solve) {
-                Text("Solve")
-            }
-
-            Hints(
-                hints = model.hints,
-                onClick = model::apply
-            )
         }
+
+        NewGame(onNewGame = model::startNewGame)
     }
 }
 
@@ -207,7 +210,7 @@ fun Square(
         else -> Color.White
     }
     Box(modifier
-        .clickable() { onClick() }
+        .clickable { onClick() }
         .background(background)
         .onKeyEvent { event ->
             event.toSquareInput()?.let { input ->
@@ -251,18 +254,29 @@ fun BoxScope.SquareValue(square: Square) {
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewGame(onNewGame: (String) -> Unit) {
-    Row {
-        var gameString by remember { mutableStateOf("") }
-        TextField(
-            value = gameString,
-            onValueChange = { gameString = it }
-        )
-        Button(onClick = { onNewGame(gameString) }) {
-            Text("Start New Game")
-        }
-    }
+    var gameString by remember { mutableStateOf("") }
+    TextField(
+        value = gameString,
+        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+        onValueChange = { newValue ->
+            if (newValue.length <= 81) {
+                gameString = newValue
+            }
+        },
+        label = { Text("New Game") },
+        modifier = Modifier
+            .width(600.dp)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
+                    onNewGame(gameString)
+                    return@onKeyEvent true
+                }
+                return@onKeyEvent false
+            }
+    )
 }
 
 @Composable
