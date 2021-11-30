@@ -2,6 +2,20 @@ package cberg.sudoku.solver
 
 import cberg.sudoku.game.*
 
+/*
+    TODO: implement Block and Column/Row Interaction
+    TODO: implement Block and Block Interaction
+    TODO: implement Swordfish
+    https://www.kristanix.com/sudokuepic/sudoku-solving-techniques.php
+
+    Example from sudoku.com Expert #7:
+        - erase 7 from r3c2 because all 7s in b7 are in c2
+        - erase 7 from b8r8 and b8r9 because all 7s in r7 are in b8
+        - erase 8 from b8r8 and b8r9 because all 8s in r7 are in b8
+        - erase 2 from b6r6 because all 2s in r4 are in b6
+ */
+
+
 sealed interface Technique {
     fun analyze(game: Game): Sequence<Hint>
 
