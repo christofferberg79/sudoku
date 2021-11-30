@@ -133,8 +133,7 @@ private val positions = List(81) { index -> Position(index) }
 private val rows = List(9) { row -> positions.filter { position -> position.row == row } }
 private val cols = List(9) { col -> positions.filter { position -> position.col == col } }
 private val blocks = List(9) { block -> positions.filter { position -> position.block == block } }
-private val groupList = rows + cols + blocks
-val groups = groupList.asSequence()
+val groups = (rows + cols + blocks).asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
 private fun affectedBy(position: Position) = buildSet {
