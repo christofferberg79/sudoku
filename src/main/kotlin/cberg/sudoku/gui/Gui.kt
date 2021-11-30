@@ -269,12 +269,12 @@ fun NewGame(onNewGame: (String) -> Unit) {
         label = { Text("New Game") },
         modifier = Modifier
             .width(600.dp)
-            .onKeyEvent { event ->
+            .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
                     onNewGame(gameString)
-                    return@onKeyEvent true
+                    return@onPreviewKeyEvent true
                 }
-                return@onKeyEvent false
+                return@onPreviewKeyEvent false
             }
     )
 }
