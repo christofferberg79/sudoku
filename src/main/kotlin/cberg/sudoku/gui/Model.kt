@@ -14,7 +14,7 @@ data class Settings(
     val pencil: Boolean = false
 )
 
-class Model(input: String) {
+class Model(private val input: String) {
     var game by mutableStateOf(Game(input).writePencilMarks())
         private set
 
@@ -31,6 +31,10 @@ class Model(input: String) {
 
     private inline fun updateSettings(update: Settings.() -> Settings) {
         settings = settings.update()
+    }
+
+    fun reset() = updateGame {
+        Game(input).writePencilMarks()
     }
 
     fun writeChar(position: Position, char: Char) = updateGame {

@@ -80,6 +80,10 @@ fun Sudoku(model: Model) {
                 Text("Write pencil marks")
             }
 
+            Button(onClick = model::reset) {
+                Text("Reset")
+            }
+
             Button(onClick = model::solve) {
                 Text("Solve")
             }
