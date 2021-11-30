@@ -3,7 +3,6 @@ package cberg.sudoku.gui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.isTypedEvent
 import androidx.compose.material.Button
@@ -17,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusOrder
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
@@ -34,7 +32,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
         contentAlignment = Alignment.Center
     ) {
         val model = remember {
-            Model("..4..1..8........73..4.....1..2.6..9....387...2.....1..8.3...2..6..1.....7.....65")
+            Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
         }
         Sudoku(model)
     }
@@ -45,10 +43,19 @@ fun Sudoku(model: Model) {
     val game = model.game
     val settings = model.settings
 
-    Row {
+    Row(modifier = Modifier.onKeyEvent { event ->
+        val char = event.key.toSudokuChar()
+        if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Game.symbols) {
+            checkNotNull(char)
+            model.analyze(char)
+            return@onKeyEvent true
+        }
+        return@onKeyEvent false
+    }) {
         Column {
             Game(
                 game = game,
+                analyzing = model.analyzing,
                 onType = model::writeChar,
                 onDelete = model::erase
             )
@@ -62,6 +69,11 @@ fun Sudoku(model: Model) {
                     GameStatus.IncorrectSolution -> "Incorrect"
                     GameStatus.CorrectSolution -> "Correct"
                 }
+            )
+
+            Text(
+                text = "Analyzing: ${model.analyzing ?: "none"}",
+                modifier = Modifier.padding(top = 10.dp)
             )
 
             Setting(
@@ -96,9 +108,24 @@ fun Sudoku(model: Model) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Key.toSudokuChar() = when (this) {
+    Key.One -> '1'
+    Key.Two -> '2'
+    Key.Three -> '3'
+    Key.Four -> '4'
+    Key.Five -> '5'
+    Key.Six -> '6'
+    Key.Seven -> '7'
+    Key.Eight -> '8'
+    Key.Nine -> '9'
+    else -> null
+}
+
 @Composable
 fun Game(
     game: Game,
+    analyzing: Char?,
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
 ) {
@@ -119,6 +146,7 @@ fun Game(
                 right = focusRequesters.getValue(position.right())
             },
             square = game.squareAt(position),
+            analyzing = analyzing,
             onInput = { input ->
                 when (input) {
                     is SquareInput.Value -> onType(position, input.value)
@@ -169,15 +197,18 @@ private fun Grid(
 fun Square(
     modifier: Modifier = Modifier,
     square: Square,
+    analyzing: Char?,
     onInput: (SquareInput) -> Unit,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    var isFocused by remember { mutableStateOf(false) }
+    val background = when {
+        square.isNotEmpty() && square.value == analyzing -> Color.Blue
+        square.isEmpty() && analyzing in square.marks -> Color.Green
+        else -> Color.White
+    }
     Box(modifier
-        .onFocusChanged { focusState -> isFocused = focusState.hasFocus }
-        .clickable(interactionSource, indication = null) { onClick() }
-        .background(if (isFocused) Color.LightGray else Color.White)
+        .clickable() { onClick() }
+        .background(background)
         .onKeyEvent { event ->
             event.toSquareInput()?.let { input ->
                 onInput(input)

@@ -25,6 +25,8 @@ class Model(private val input: String) {
 
     val gameStatus by derivedStateOf { game.getStatus() }
 
+    var analyzing by mutableStateOf<Char?>(null)
+
     private inline fun updateGame(update: Game.() -> Game) {
         game = game.update()
     }
@@ -77,5 +79,13 @@ class Model(private val input: String) {
 
     fun startNewGame(gameString: String) = updateGame {
         Game(gameString).writePencilMarks()
+    }
+
+    fun analyze(char: Char) {
+        analyzing = if (char == analyzing) {
+            null
+        } else {
+            char
+        }
     }
 }
