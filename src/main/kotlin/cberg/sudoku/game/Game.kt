@@ -15,6 +15,10 @@ fun Square.isNotEmpty() = value != null
 data class Game(
     val squares: List<Square>
 ) {
+    init {
+        require(squares.size == 81)
+    }
+
     override fun toString() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
 
     companion object {
@@ -27,14 +31,13 @@ private val Position.index get() = row * 9 + col
 private fun Position(index: Int) = Position(row = index / 9, col = index % 9)
 
 fun Game(input: String): Game {
-    require(input.length == 81)
-    require(input.all { c -> c == '.' || c in symbols })
-
-    val squares = input.mapIndexed { index, char ->
+    val squares = List(81) { index ->
+        val char = input.getOrNull(index)
         val given = char in symbols
         val value = if (given) char else null
         Square(Position(index), value, given)
     }
+
     return Game(squares)
 }
 
