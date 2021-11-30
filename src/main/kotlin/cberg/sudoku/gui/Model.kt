@@ -1,5 +1,6 @@
 package cberg.sudoku.gui
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,16 +21,12 @@ class Model(input: String) {
     var settings by mutableStateOf(Settings())
         private set
 
-    var hints by mutableStateOf(game.filteredHints())
-        private set
+    val hints by derivedStateOf { game.filteredHints() }
 
-    var gameStatus by mutableStateOf(game.getStatus())
-        private set
+    val gameStatus by derivedStateOf { game.getStatus() }
 
     private inline fun updateGame(update: Game.() -> Game) {
         game = game.update()
-        hints = game.filteredHints()
-        gameStatus = game.getStatus()
     }
 
     private inline fun updateSettings(update: Settings.() -> Settings) {
