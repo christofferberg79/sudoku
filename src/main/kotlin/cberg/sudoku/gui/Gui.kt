@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.isTypedEvent
 import androidx.compose.material.Button
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
@@ -263,20 +264,23 @@ sealed class SquareInput {
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun KeyEvent.toSquareInput(): SquareInput? {
-    when {
-        type != KeyEventType.KeyDown -> return null
-        key == Key.Delete || key == Key.Backspace -> return SquareInput.Delete
-        key == Key.DirectionUp -> return SquareInput.Move(FocusDirection.Up)
-        key == Key.DirectionDown -> return SquareInput.Move(FocusDirection.Down)
-        key == Key.DirectionLeft -> return SquareInput.Move(FocusDirection.Left)
-        key == Key.DirectionRight -> return SquareInput.Move(FocusDirection.Right)
-        else -> {
-            val char = utf16CodePoint.toChar()
-            if (char in Game.symbols) {
-                return SquareInput.Value(char)
-            }
-            return null
+private fun KeyEvent.toSquareInput(): SquareInput? = when {
+    isTypedEvent -> {
+        when (val char = utf16CodePoint.toChar()) {
+            in Game.symbols -> SquareInput.Value(char)
+            else -> null
         }
     }
+    type == KeyEventType.KeyDown -> {
+        when (key) {
+            Key.Delete -> SquareInput.Delete
+            Key.Backspace -> SquareInput.Delete
+            Key.DirectionUp -> SquareInput.Move(FocusDirection.Up)
+            Key.DirectionDown -> SquareInput.Move(FocusDirection.Down)
+            Key.DirectionLeft -> SquareInput.Move(FocusDirection.Left)
+            Key.DirectionRight -> SquareInput.Move(FocusDirection.Right)
+            else -> null
+        }
+    }
+    else -> null
 }
