@@ -14,8 +14,10 @@ data class Settings(
     val pencil: Boolean = false
 )
 
-class Model(private val input: String) {
-    var game by mutableStateOf(Game(input).writePencilMarks())
+class Model(input: String) {
+    private var initialGame = Game(input)
+
+    var game by mutableStateOf(initialGame)
         private set
 
     var settings by mutableStateOf(Settings())
@@ -35,9 +37,7 @@ class Model(private val input: String) {
         settings = settings.update()
     }
 
-    fun reset() = updateGame {
-        Game(input).writePencilMarks()
-    }
+    fun reset() = updateGame { initialGame }
 
     fun writeChar(position: Position, char: Char) = updateGame {
         if (settings.pencil) {
@@ -49,11 +49,9 @@ class Model(private val input: String) {
         }
     }
 
-    fun erase(position: Position) = updateGame {
-        if (settings.pencil) {
-            this
-        } else {
-            eraseValue(position)
+    fun erase(position: Position) {
+        if (!settings.pencil) {
+            updateGame { eraseValue(position) }
         }
     }
 
@@ -74,11 +72,12 @@ class Model(private val input: String) {
     }
 
     fun apply(hint: Hint) = updateGame {
-        hint.applyTo(game)
+        hint.applyTo(this)
     }
 
-    fun startNewGame(gameString: String) = updateGame {
-        Game(gameString).writePencilMarks()
+    fun startNewGame(gameString: String) {
+        initialGame = Game(gameString)
+        reset()
     }
 
     fun analyze(char: Char) {
