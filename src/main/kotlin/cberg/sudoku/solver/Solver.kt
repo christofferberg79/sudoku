@@ -39,16 +39,14 @@ class Solver {
         square.isEmpty() && square.marks.isEmpty()
     }
 
-    private fun Game.missingCandidate() = symbols.any { symbol ->
-        groups.any { group ->
+    private fun Game.missingCandidate() = groups.any { group ->
+        Game.symbols.any { symbol ->
             group.map { position -> squareAt(position) }
                 .none { square -> symbol == square.value || symbol in square.marks }
         }
     }
 
 }
-
-val symbols = '1'..'9'
 
 sealed class Solution
 class UniqueSolution(val solution: String) : Solution()

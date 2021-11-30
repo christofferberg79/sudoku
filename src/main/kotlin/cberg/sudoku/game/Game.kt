@@ -1,5 +1,7 @@
 package cberg.sudoku.game
 
+import cberg.sudoku.game.Game.Companion.symbols
+
 data class Square(
     val position: Position,
     val value: Char?,
@@ -14,24 +16,27 @@ data class Game(
     val squares: List<Square>
 ) {
     override fun toString() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
+
+    companion object {
+        val symbols = ('1'..'9').toSet()
+    }
 }
 
 fun Game.squareAt(position: Position) = squares[position.index]
+private val Position.index get() = row * 9 + col
+private fun Position(index: Int) = Position(row = index / 9, col = index % 9)
 
 fun Game(input: String): Game {
     require(input.length == 81)
-    require(input.all { c -> c == '.' || c in '1'..'9' })
+    require(input.all { c -> c == '.' || c in symbols })
 
     val squares = input.mapIndexed { index, char ->
-        val given = char in '1'..'9'
+        val given = char in symbols
         val value = if (given) char else null
         Square(Position(index), value, given)
     }
     return Game(squares)
 }
-
-private val Position.index get() = row * 9 + col
-private fun Position(index: Int) = positions[index]
 
 fun Game.setValue(position: Position, char: Char): Game {
     val square = squareAt(position)
@@ -99,7 +104,7 @@ fun Game.writePencilMarks() = copy(squares = squares.map { square ->
     if (square.isEmpty()) {
         val excludedValues = affectedBy(square.position)
             .mapNotNull { position -> squareAt(position).value }.toSet()
-        square.copy(marks = ('1'..'9').filterNot { it in excludedValues }.toSet())
+        square.copy(marks = symbols - excludedValues)
     } else {
         square
     }
@@ -119,20 +124,22 @@ fun Game.getStatus(): GameStatus = when {
 
 private fun Game.isCorrect(): Boolean {
     return groups.all { group ->
-        group.map { position -> squareAt(position).value }.containsAll(('1'..'9').toList())
+        group.map { position -> squareAt(position).value }.containsAll(symbols)
     }
 }
 
 
-private val positions = List(81) { i -> Position(i / 9, i % 9) }
-private val rows = List(9) { row -> positions.filter { s -> s.row == row } }
-private val cols = List(9) { col -> positions.filter { s -> s.col == col } }
-private val blocks = List(9) { block -> positions.filter { s -> s.block == block } }
-val groups = rows.asSequence() + cols.asSequence() + blocks.asSequence()
+private val positions = List(81) { index -> Position(index) }
+private val rows = List(9) { row -> positions.filter { position -> position.row == row } }
+private val cols = List(9) { col -> positions.filter { position -> position.col == col } }
+private val blocks = List(9) { block -> positions.filter { position -> position.block == block } }
+private val groupList = rows + cols + blocks
+val groups = groupList.asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
 private fun affectedBy(position: Position) = buildSet {
     addAll(rows[position.row])
     addAll(cols[position.col])
     addAll(blocks[position.block])
+    remove(position)
 }

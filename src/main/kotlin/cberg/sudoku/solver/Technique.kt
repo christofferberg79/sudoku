@@ -19,7 +19,7 @@ sealed interface Technique {
 
     object HiddenSingle : Technique {
         override fun analyze(game: Game): Sequence<Hint> = groups.flatMap { group ->
-            symbols.asSequence().mapNotNull { symbol ->
+            Game.symbols.asSequence().mapNotNull { symbol ->
                 group.singleOrNull { position -> symbol in game.squareAt(position).marks }
                     ?.let { position ->
                         Hint(Action.SetValue(position, symbol), Reason(position, symbol), this)

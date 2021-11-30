@@ -273,7 +273,7 @@ private fun KeyEvent.toSquareInput(): SquareInput? {
         key == Key.DirectionRight -> return SquareInput.Move(FocusDirection.Right)
         else -> {
             val char = utf16CodePoint.toChar()
-            if (char in '1'..'9') {
+            if (char in Game.symbols) {
                 return SquareInput.Value(char)
             }
             return null
