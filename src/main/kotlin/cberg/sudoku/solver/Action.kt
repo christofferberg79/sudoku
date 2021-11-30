@@ -15,6 +15,8 @@ sealed interface Action {
     }
 
     data class EraseMarks(override val position: Position, val marks: Set<Char>) : Action {
+        constructor(position: Position, mark: Char) : this(position, setOf(mark))
+
         init {
             require(marks.isNotEmpty())
         }

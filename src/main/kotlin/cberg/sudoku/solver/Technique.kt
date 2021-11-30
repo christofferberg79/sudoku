@@ -62,6 +62,7 @@ sealed interface Technique {
             emptySquares
                 .getMarks()
                 .tuplesOfSize(n)
+                .map { tuple -> tuple.toSet() }
                 .associateWith { tuple -> emptySquares.filter { square -> square.containsMarksIn(tuple) } }
                 .filterValues { squares -> squares.size == n }
                 .mapNotNull { (tuple, squares) ->
@@ -79,6 +80,64 @@ sealed interface Technique {
         }
 
         override fun toString() = "Hidden ${tupleString(n)}"
+    }
+
+    data class XWing(private val n: Int) : Technique {
+        override fun analyze(game: Game) = xWingByRow(game) + xWingByCol(game)
+
+        private fun xWingByRow(game: Game) = Game.symbols.asSequence().flatMap { symbol ->
+            rows
+                .map { row -> game.emptySquaresOf(row).filter { square -> symbol in square.marks } }
+                .filter { row -> row.size == n }
+                .groupBy { row -> row.map { square -> square.position.col }.toSet() }
+                .filterValues { rows -> rows.size == n }
+                .mapNotNull { (colIndices, rows) ->
+                    // each entry has n rows with the symbol in the same n columns
+                    check(rows.size == n && colIndices.size == n)
+                    val rowIndices = rows.map { row -> row.first().position.row }.toSet()
+                    check(rowIndices.size == n)
+                    val actions = colIndices.flatMap { colIndex ->
+                        cols[colIndex].filterNot { position -> position.row in rowIndices }
+                            .map { position -> game.squareAt(position) }
+                            .filter { square -> square.isEmpty() && symbol in square.marks }
+                            .map { square -> Action.EraseMarks(square.position, symbol) }
+                    }
+                    if (actions.isNotEmpty()) {
+                        val reason = Reason(rows.flatMap { row -> positionsOf(row) }, symbol)
+                        Hint(actions, reason, this)
+                    } else {
+                        null
+                    }
+                }
+        }
+
+        private fun xWingByCol(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
+            cols
+                .map { col -> game.emptySquaresOf(col).filter { square -> symbol in square.marks } }
+                .filter { col -> col.size == n }
+                .groupBy { col -> col.map { square -> square.position.row }.toSet() }
+                .filterValues { cols -> cols.size == n }
+                .mapNotNull { (rowIndices, cols) ->
+                    // each entry has n cols with the symbol in the same n rows
+                    check(cols.size == n && rowIndices.size == n)
+                    val colIndices = cols.map { col -> col.first().position.col }.toSet()
+                    check(colIndices.size == n)
+                    val actions = rowIndices.flatMap { rowIndex ->
+                        rows[rowIndex].filterNot { position -> position.col in colIndices }
+                            .map { position -> game.squareAt(position) }
+                            .filter { square -> square.isEmpty() && symbol in square.marks }
+                            .map { square -> Action.EraseMarks(square.position, symbol) }
+                    }
+                    if (actions.isNotEmpty()) {
+                        val reason = Reason(cols.flatMap { col -> positionsOf(col) }, symbol)
+                        Hint(actions, reason, this)
+                    } else {
+                        null
+                    }
+                }
+        }
+
+        override fun toString() = "X-Wing ($n)"
     }
 }
 
@@ -103,11 +162,11 @@ private fun Iterable<Square>.getMarks(): Set<Char> = fold(mutableSetOf()) { mark
     marks.apply { addAll(square.marks) }
 }
 
-private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<Set<E>> {
+private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<List<E>> {
     require(n >= 1)
 
     return if (n == 1) {
-        map { setOf(it) }
+        map { listOf(it) }
     } else {
         flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { it + v } }
     }
