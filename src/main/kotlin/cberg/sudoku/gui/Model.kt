@@ -49,10 +49,8 @@ class Model(input: String) {
         }
     }
 
-    fun erase(position: Position) {
-        if (!settings.pencil) {
-            updateGame { eraseValue(position) }
-        }
+    fun erase(position: Position) = updateGame {
+        erase(position)
     }
 
     fun writePencilMarks() = updateGame {

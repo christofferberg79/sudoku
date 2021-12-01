@@ -52,14 +52,14 @@ fun Game.setValue(position: Position, char: Char): Game {
     }
 }
 
-fun Game.eraseValue(position: Position): Game {
+fun Game.erase(position: Position): Game {
     val square = squareAt(position)
-    if (square.given || square.isEmpty()) {
+    if (square.given) {
         return this
     }
 
     return updateSquare(position) {
-        copy(value = null)
+        copy(value = null, marks = emptySet())
     }
 }
 
