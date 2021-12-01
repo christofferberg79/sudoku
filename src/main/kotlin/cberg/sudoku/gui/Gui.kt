@@ -30,7 +30,7 @@ import cberg.sudoku.solver.Hint
 
 fun gui() = singleWindowApplication(title = "Sudoku") {
     val model = remember {
-        Model(".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37.")
+        Model("")
     }
     Sudoku(model)
 }
