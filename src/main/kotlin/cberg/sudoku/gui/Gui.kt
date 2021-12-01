@@ -57,6 +57,7 @@ fun Sudoku(model: Model) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Game(
                 game = game,
+                given = model.given,
                 analyzing = model.analyzing,
                 onType = model::writeChar,
                 onDelete = model::erase
@@ -128,6 +129,7 @@ private fun Key.toSudokuChar() = when (this) {
 @Composable
 fun Game(
     game: Game,
+    given: Set<Position>,
     analyzing: Char?,
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
@@ -141,6 +143,7 @@ fun Game(
     ) { position ->
         val focusRequester = focusRequesters.getValue(position)
         val focusManager = LocalFocusManager.current
+        val square = game.squareAt(position)
         Square(
             modifier = Modifier.focusOrder(focusRequester) {
                 up = focusRequesters.getValue(position.up())
@@ -148,7 +151,8 @@ fun Game(
                 left = focusRequesters.getValue(position.left())
                 right = focusRequesters.getValue(position.right())
             },
-            square = game.squareAt(position),
+            square = square,
+            given = square.position in given,
             analyzing = analyzing,
             onInput = { input ->
                 when (input) {
@@ -200,6 +204,7 @@ private fun Grid(
 fun Square(
     modifier: Modifier = Modifier,
     square: Square,
+    given: Boolean,
     analyzing: Char?,
     onInput: (SquareInput) -> Unit,
     onClick: () -> Unit
@@ -225,7 +230,7 @@ fun Square(
         if (square.isEmpty()) {
             SquareMarks(square)
         } else {
-            SquareValue(square)
+            SquareValue(square, given)
         }
     }
 }
@@ -245,12 +250,12 @@ fun SquareMarks(square: Square) {
 }
 
 @Composable
-fun BoxScope.SquareValue(square: Square) {
+fun BoxScope.SquareValue(square: Square, given: Boolean) {
     Text(
         text = "${square.value}",
         modifier = Modifier.align(Alignment.Center),
         fontSize = 40.sp,
-        color = if (square.given) Color.Black else Color.Blue
+        color = if (given) Color.Black else Color.Blue
     )
 }
 

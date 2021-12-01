@@ -15,10 +15,12 @@ data class Settings(
 )
 
 class Model(input: String) {
-    private var initialGame = Game(input)
+    private var initialGame by mutableStateOf(Game(input))
 
     var game by mutableStateOf(initialGame)
         private set
+
+    val given by derivedStateOf { initialGame.squares.filter { it.isNotEmpty() }.map { it.position }.toSet() }
 
     var settings by mutableStateOf(Settings())
         private set
@@ -39,18 +41,30 @@ class Model(input: String) {
 
     fun reset() = updateGame { initialGame }
 
-    fun writeChar(position: Position, char: Char) = updateGame {
-        if (settings.pencil) {
-            toggleMark(position, char)
-        } else if (settings.autoErasePencilMarks) {
-            setValueAndEraseMarks(position, char)
-        } else {
-            setValue(position, char)
+    fun writeChar(position: Position, char: Char) {
+        if (position in given) {
+            return
+        }
+
+        updateGame {
+            if (settings.pencil) {
+                toggleMark(position, char)
+            } else if (settings.autoErasePencilMarks) {
+                setValueAndEraseMarks(position, char)
+            } else {
+                setValue(position, char)
+            }
         }
     }
 
-    fun erase(position: Position) = updateGame {
-        erase(position)
+    fun erase(position: Position) {
+        if (position in given) {
+            return
+        }
+
+        updateGame {
+            erase(position)
+        }
     }
 
     fun writePencilMarks() = updateGame {

@@ -5,7 +5,6 @@ import cberg.sudoku.game.Game.Companion.symbols
 data class Square(
     val position: Position,
     val value: Char?,
-    val given: Boolean,
     val marks: Set<Char> = emptySet()
 )
 
@@ -33,9 +32,8 @@ private fun Position(index: Int) = Position(row = index / 9, col = index % 9)
 fun Game(input: String): Game {
     val squares = List(81) { index ->
         val char = input.getOrNull(index)
-        val given = char in symbols
-        val value = if (given) char else null
-        Square(Position(index), value, given)
+        val value = if (char in symbols) char else null
+        Square(Position(index), value)
     }
 
     return Game(squares)
@@ -43,7 +41,7 @@ fun Game(input: String): Game {
 
 fun Game.setValue(position: Position, char: Char): Game {
     val square = squareAt(position)
-    if (square.given || square.value == char) {
+    if (square.value == char) {
         return this
     }
 
@@ -54,7 +52,7 @@ fun Game.setValue(position: Position, char: Char): Game {
 
 fun Game.erase(position: Position): Game {
     val square = squareAt(position)
-    if (square.given) {
+    if (square.isEmpty() && square.marks.isEmpty()) {
         return this
     }
 
