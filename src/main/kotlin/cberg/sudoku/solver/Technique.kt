@@ -3,7 +3,6 @@ package cberg.sudoku.solver
 import cberg.sudoku.game.*
 
 /*
-    TODO: implement Block and Block Interaction
     TODO: implement Swordfish
     https://www.kristanix.com/sudokuepic/sudoku-solving-techniques.php
  */
@@ -147,16 +146,27 @@ sealed interface Technique {
         override fun toString() = "X-Wing ($n)"
     }
 
-    object BlockRowInteraction : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
-            blocks.asSequence()
-                .map { block -> game.emptySquaresOf(block).filter { square -> symbol in square.marks } }
+    object GroupGroupInteraction : Technique {
+        override fun analyze(game: Game): Sequence<Hint> =
+            analyze(game, blocks, rows, Position::row) +
+                    analyze(game, blocks, cols, Position::col) +
+                    analyze(game, rows, blocks, Position::block) +
+                    analyze(game, cols, blocks, Position::block)
+
+        private fun analyze(
+            game: Game,
+            primaryGroups: List<List<Position>>,
+            secondaryGroup: List<List<Position>>,
+            secondaryIndexSelector: (Position) -> Int
+        ) = Game.symbols.asSequence().flatMap { symbol ->
+            primaryGroups.asSequence()
+                .map { primaryGroup -> game.emptySquaresOf(primaryGroup).filter { square -> symbol in square.marks } }
                 .filter { squares -> squares.size > 1 }
                 .mapNotNull { squares ->
                     val positions = positionsOf(squares)
-                    val rowsInBlockWithSymbol = positions.map { position -> position.row }.toSet()
-                    val actions = rowsInBlockWithSymbol.singleOrNull()?.let { singleRow ->
-                        game.emptySquaresOf(rows[singleRow])
+                    val secondaryIndicesInPrimaryGroupWithSymbol = positions.map(secondaryIndexSelector).toSet()
+                    val actions = secondaryIndicesInPrimaryGroupWithSymbol.singleOrNull()?.let { singleIndex ->
+                        game.emptySquaresOf(secondaryGroup[singleIndex])
                             .filter { square -> square.position !in positions }
                             .filter { square -> symbol in square.marks }
                             .map { square -> Action.EraseMarks(square.position, symbol) }
@@ -169,82 +179,7 @@ sealed interface Technique {
                 }
         }
 
-        override fun toString() = "Block/Row Interaction"
-    }
-
-    object BlockColumnInteraction : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
-            blocks.asSequence()
-                .map { block -> game.emptySquaresOf(block).filter { square -> symbol in square.marks } }
-                .filter { squares -> squares.size > 1 }
-                .mapNotNull { squares ->
-                    val positions = positionsOf(squares)
-                    val colsInBlockWithSymbol = positions.map { position -> position.col }.toSet()
-                    val actions = colsInBlockWithSymbol.singleOrNull()?.let { singleCol ->
-                        game.emptySquaresOf(cols[singleCol])
-                            .filter { square -> square.position !in positions }
-                            .filter { square -> symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
-                    } ?: emptyList()
-                    if (actions.isNotEmpty()) {
-                        Hint(actions, Reason(positions, symbol), this)
-                    } else {
-                        null
-                    }
-                }
-        }
-
-        override fun toString() = "Block/Column Interaction"
-    }
-
-    object RowBlockInteraction : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
-            rows.asSequence()
-                .map { row -> game.emptySquaresOf(row).filter { square -> symbol in square.marks } }
-                .filter { squares -> squares.size > 1 }
-                .mapNotNull { squares ->
-                    val positions = positionsOf(squares)
-                    val blocksInRowWithSymbol = positions.map { position -> position.block }.toSet()
-                    val actions = blocksInRowWithSymbol.singleOrNull()?.let { singleBlock ->
-                        game.emptySquaresOf(blocks[singleBlock])
-                            .filter { square -> square.position !in positions }
-                            .filter { square -> symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
-                    } ?: emptyList()
-                    if (actions.isNotEmpty()) {
-                        Hint(actions, Reason(positions, symbol), this)
-                    } else {
-                        null
-                    }
-                }
-        }
-
-        override fun toString() = "Row/Block Interaction"
-    }
-
-    object ColumnBlockInteraction : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
-            cols.asSequence()
-                .map { col -> game.emptySquaresOf(col).filter { square -> symbol in square.marks } }
-                .filter { squares -> squares.size > 1 }
-                .mapNotNull { squares ->
-                    val positions = positionsOf(squares)
-                    val blocksInColWithSymbol = positions.map { position -> position.block }.toSet()
-                    val actions = blocksInColWithSymbol.singleOrNull()?.let { singleBlock ->
-                        game.emptySquaresOf(blocks[singleBlock])
-                            .filter { square -> square.position !in positions }
-                            .filter { square -> symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
-                    } ?: emptyList()
-                    if (actions.isNotEmpty()) {
-                        Hint(actions, Reason(positions, symbol), this)
-                    } else {
-                        null
-                    }
-                }
-        }
-
-        override fun toString() = "Column/Block Interaction"
+        override fun toString() = "Group/Group Interaction"
     }
 }
 
