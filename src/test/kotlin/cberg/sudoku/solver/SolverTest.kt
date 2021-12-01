@@ -33,6 +33,13 @@ class SolverTest {
     }
 
     @Test
+    fun xWing() {
+        val input = ".........76...3..2..264...94.39...7......49.3..5....2..1.56....37..9..41.......6."
+        val solution = "841729635769153482532648719423985176687214953195376824214567398376892541958431267"
+        testPuzzleWithUniqueSolution(input, solution)
+    }
+
+    @Test
     fun empty() {
         val input = "................................................................................."
         testInvalidPuzzle(input)
