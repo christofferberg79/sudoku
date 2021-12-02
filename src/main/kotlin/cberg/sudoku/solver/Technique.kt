@@ -101,28 +101,36 @@ sealed interface Technique {
         override fun toString() = "Hidden ${tupleString(n)}"
     }
 
-    data class XWing(private val n: Int) : Technique {
-        override fun analyze(game: Game) = xWingByRow(game) + xWingByCol(game)
+    object XWing : Technique {
+        override fun analyze(game: Game) =
+            analyze(game, rows, { row }, cols, { col }) + analyze(game, cols, { col }, rows, { row })
 
-        private fun xWingByRow(game: Game) = Game.symbols.asSequence().flatMap { symbol ->
-            rows
-                .map { row -> game.emptySquaresOf(row).filter { square -> symbol in square.marks } }
-                .filter { row -> row.size == n }
-                .groupBy { row -> row.map { square -> square.position.col }.toSet() }
-                .filterValues { rows -> rows.size == n }
-                .mapNotNull { (colIndices, rows) ->
-                    // each entry has n rows with the symbol in the same n columns
-                    check(rows.size == n && colIndices.size == n)
-                    val rowIndices = rows.map { row -> row.first().position.row }.toSet()
-                    check(rowIndices.size == n)
-                    val actions = colIndices.flatMap { colIndex ->
-                        cols[colIndex].filterNot { position -> position.row in rowIndices }
+        private fun analyze(
+            game: Game,
+            primaryGroups: List<List<Position>>,
+            primaryIndex: Position.() -> Int,
+            secondaryGroups: List<List<Position>>,
+            secondaryIndex: Position.() -> Int
+        ): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
+            primaryGroups
+                .map { primaryGroup -> game.emptySquaresOf(primaryGroup).filter { square -> symbol in square.marks } }
+                .filter { primaryGroup -> primaryGroup.size == 2 }
+                .groupBy { primaryGroup -> primaryGroup.map { square -> square.position.secondaryIndex() }.toSet() }
+                .filterValues { primaryGroups -> primaryGroups.size == 2 }
+                .mapNotNull { (secondaryIndices, primaryGroups) ->
+                    // each entry has 2 primaryGroups with the symbol in the same 2 secondaryGroups
+                    check(primaryGroups.size == 2 && secondaryIndices.size == 2)
+                    val primaryIndices =
+                        primaryGroups.map { primaryGroup -> primaryGroup.first().position.primaryIndex() }.toSet()
+                    check(primaryIndices.size == 2)
+                    val actions = secondaryIndices.flatMap { secondaryIndex ->
+                        secondaryGroups[secondaryIndex].filterNot { position -> position.primaryIndex() in primaryIndices }
                             .map { position -> game.squareAt(position) }
                             .filter { square -> square.isEmpty() && symbol in square.marks }
                             .map { square -> Action.EraseMarks(square.position, symbol) }
                     }
                     if (actions.isNotEmpty()) {
-                        val reason = Reason(rows.flatMap { row -> positionsOf(row) }, symbol)
+                        val reason = Reason(primaryGroups.flatMap { primaryGroup -> positionsOf(primaryGroup) }, symbol)
                         Hint(actions, reason, this)
                     } else {
                         null
@@ -130,33 +138,7 @@ sealed interface Technique {
                 }
         }
 
-        private fun xWingByCol(game: Game): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
-            cols
-                .map { col -> game.emptySquaresOf(col).filter { square -> symbol in square.marks } }
-                .filter { col -> col.size == n }
-                .groupBy { col -> col.map { square -> square.position.row }.toSet() }
-                .filterValues { cols -> cols.size == n }
-                .mapNotNull { (rowIndices, cols) ->
-                    // each entry has n cols with the symbol in the same n rows
-                    check(cols.size == n && rowIndices.size == n)
-                    val colIndices = cols.map { col -> col.first().position.col }.toSet()
-                    check(colIndices.size == n)
-                    val actions = rowIndices.flatMap { rowIndex ->
-                        rows[rowIndex].filterNot { position -> position.col in colIndices }
-                            .map { position -> game.squareAt(position) }
-                            .filter { square -> square.isEmpty() && symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
-                    }
-                    if (actions.isNotEmpty()) {
-                        val reason = Reason(cols.flatMap { col -> positionsOf(col) }, symbol)
-                        Hint(actions, reason, this)
-                    } else {
-                        null
-                    }
-                }
-        }
-
-        override fun toString() = "X-Wing ($n)"
+        override fun toString() = "X-Wing"
     }
 
     object GroupGroupInteraction : Technique {

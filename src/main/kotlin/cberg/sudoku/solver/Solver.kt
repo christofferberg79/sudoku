@@ -61,8 +61,7 @@ private val techniques = listOf(
     HiddenTuple(2),
     NakedTuple(3),
     HiddenTuple(3),
-    XWing(2),
-    XWing(3)
+    XWing
 )
 
 fun solve(game: Game) = generateSequence(game, ::applyFirstHint).last()
