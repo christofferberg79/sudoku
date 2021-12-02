@@ -3,8 +3,21 @@ package cberg.sudoku.solver
 import cberg.sudoku.game.*
 
 /*
-    TODO: implement Swordfish
-    https://www.kristanix.com/sudokuepic/sudoku-solving-techniques.php
+    TODO: implement more techniques
+
+    - Finned X-Wing
+    - Sashimi X-Wing
+    - Swordfish
+    - Finned Swordfish
+    - Sashimi Swordfish
+    - Forcing Chain
+    - XY-Wing
+    - Unique Rectangle (types 1-5)
+    - Nishio
+
+    https://www.sudokuonline.io/tips/advanced-sudoku-strategies
+    https://www.sudokuoftheday.com/techniques/
+    https://www.sudopedia.org/wiki/Main_Page
  */
 
 
