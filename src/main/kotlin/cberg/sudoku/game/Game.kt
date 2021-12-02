@@ -26,8 +26,6 @@ data class Game(
 }
 
 fun Game.squareAt(position: Position) = squares[position.index]
-private val Position.index get() = row * 9 + col
-private fun Position(index: Int) = Position(row = index / 9, col = index % 9)
 
 fun Game(input: String): Game {
     val squares = List(81) { index ->
@@ -129,11 +127,14 @@ private fun Game.isCorrect(): Boolean {
     }
 }
 
+private const val n = 9
+private val Position.index get() = row * n + col
+private fun Position(index: Int) = Position(row = index / n, col = index % n)
 
-private val positions = List(81) { index -> Position(index) }
-val rows = List(9) { row -> positions.filter { position -> position.row == row } }
-val cols = List(9) { col -> positions.filter { position -> position.col == col } }
-val blocks = List(9) { block -> positions.filter { position -> position.block == block } }
+private val positions = List(n * n) { index -> Position(index) }
+val rows = List(n) { row -> positions.filter { it.row == row } }
+val cols = List(n) { col -> positions.filter { it.col == col } }
+val blocks = List(n) { block -> positions.filter { it.block == block } }
 val groups = (rows + cols + blocks).asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
