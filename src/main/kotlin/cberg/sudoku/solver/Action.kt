@@ -15,13 +15,13 @@ sealed interface Action {
     }
 
     data class EraseCandidates(override val position: Position, val candidates: Set<Char>) : Action {
-        constructor(position: Position, mark: Char) : this(position, setOf(mark))
+        constructor(position: Position, candidate: Char) : this(position, setOf(candidate))
 
         init {
             require(candidates.isNotEmpty())
         }
 
-        override fun applyTo(grid: Grid) = candidates.fold(grid) { g, m -> g.eraseCandidates(position, m) }
+        override fun applyTo(grid: Grid) = grid.eraseCandidates(position, candidates)
         override fun toString() = "$position => erase candidates ${candidates.joinToString()}"
     }
 }

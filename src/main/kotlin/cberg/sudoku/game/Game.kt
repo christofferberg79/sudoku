@@ -80,13 +80,23 @@ fun Grid.setDigitAndEraseCandidates(position: Position, char: Char): Grid {
     return newGame.updateCells(position.peers()) { copy(candidates = candidates - char) }
 }
 
-fun Grid.eraseCandidates(position: Position, char: Char): Grid {
+fun Grid.eraseCandidate(position: Position, char: Char): Grid {
     val cell = cellAt(position)
     if (char !in cell.candidates) {
         return this
     }
     return updateCell(position) {
         copy(candidates = candidates - char)
+    }
+}
+
+fun Grid.eraseCandidates(position: Position, chars: Set<Char>): Grid {
+    val cell = cellAt(position)
+    if (chars.none { it in cell.candidates }) {
+        return this
+    }
+    return updateCell(position) {
+        copy(candidates = candidates - chars)
     }
 }
 
@@ -135,7 +145,7 @@ private fun Position(index: Int) = Position(row = index / n, col = index % n)
 private val positions = List(n * n) { index -> Position(index) }
 val rows = List(n) { row -> positions.filter { it.row == row } }
 val cols = List(n) { col -> positions.filter { it.col == col } }
-val boxes = List(n) { block -> positions.filter { it.block == block } }
+val boxes = List(n) { block -> positions.filter { it.box == block } }
 val lines = (rows + cols).asSequence()
 val houses = (rows + cols + boxes).asSequence()
 
@@ -143,6 +153,6 @@ val houses = (rows + cols + boxes).asSequence()
 private fun Position.peers() = buildSet {
     this.addAll(rows[row])
     this.addAll(cols[col])
-    this.addAll(boxes[block])
+    this.addAll(boxes[box])
     this.remove(this@peers)
 }
