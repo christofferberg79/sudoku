@@ -36,8 +36,8 @@ sealed interface Technique {
     }
 
     object HiddenSingle : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
-            Grid.digits.asSequence().mapNotNull { digit ->
+        override fun analyze(grid: Grid): Sequence<Hint> = singleDigit { digit ->
+            houses.mapNotNull { house ->
                 house.singleOrNull { position -> digit in grid.cellAt(position).candidates }
                     ?.let { position ->
                         Hint(Action.SetDigit(position, digit), Reason(position, digit), this)
@@ -106,37 +106,35 @@ sealed interface Technique {
 
         private fun analyze(
             grid: Grid,
-            primaryHouses: List<List<Position>>,
+            primaryLines: List<List<Position>>,
             primaryIndex: Position.() -> Int,
-            secondaryHouses: List<List<Position>>,
+            secondaryLines: List<List<Position>>,
             secondaryIndex: Position.() -> Int
-        ): Sequence<Hint> = Grid.digits.asSequence().flatMap { digit ->
-            primaryHouses
-                .map { primaryHouse ->
-                    grid.emptyCellsOf(primaryHouse).filter { cell -> digit in cell.candidates }
-                }
-                .filter { primaryHouse -> primaryHouse.size == 2 }
-                .groupBy { primaryHouse -> primaryHouse.map { cell -> cell.position.secondaryIndex() }.toSet() }
-                .filterValues { primaryHouses -> primaryHouses.size == 2 }
-                .mapNotNull { (secondaryIndices, primaryHouses) ->
-                    // each entry has 2 primaryHouses with the digit in the same 2 secondaryHouses
-                    check(primaryHouses.size == 2 && secondaryIndices.size == 2)
+        ): Sequence<Hint> = singleDigit { digit ->
+            primaryLines
+                .map { primaryLine -> grid.emptyCellsOf(primaryLine).filter { cell -> digit in cell.candidates } }
+                .filter { primaryLine -> primaryLine.size == 2 }
+                .groupBy { primaryLine -> primaryLine.map { cell -> cell.position.secondaryIndex() }.toSet() }
+                .filterValues { primaryLines -> primaryLines.size == 2 }
+                .mapNotNull { (secondaryIndices, primaryLines) ->
+                    // each entry has 2 primaryLines with the digit in the same 2 secondaryLines
+                    check(primaryLines.size == 2 && secondaryIndices.size == 2)
                     val primaryIndices =
-                        primaryHouses.map { primaryHouse -> primaryHouse.first().position.primaryIndex() }.toSet()
+                        primaryLines.map { primaryLine -> primaryLine.first().position.primaryIndex() }.toSet()
                     check(primaryIndices.size == 2)
                     val actions = secondaryIndices.flatMap { secondaryIndex ->
-                        secondaryHouses[secondaryIndex].filterNot { position -> position.primaryIndex() in primaryIndices }
+                        secondaryLines[secondaryIndex].filterNot { position -> position.primaryIndex() in primaryIndices }
                             .map { position -> grid.cellAt(position) }
                             .filter { cell -> cell.isEmpty() && digit in cell.candidates }
                             .map { cell -> Action.EraseCandidates(cell.position, digit) }
                     }
                     if (actions.isNotEmpty()) {
-                        val reason = Reason(primaryHouses.flatMap { primaryHouse -> positionsOf(primaryHouse) }, digit)
+                        val reason = Reason(primaryLines.flatMap { primaryLine -> positionsOf(primaryLine) }, digit)
                         Hint(actions, reason, this)
                     } else {
                         null
                     }
-                }
+                }.asSequence()
         }
 
         override fun toString() = "X-Wing"
@@ -152,7 +150,7 @@ sealed interface Technique {
             lines: Sequence<List<Position>>,
             boxes: Sequence<List<Position>>
         ): Sequence<Hint> {
-            return Grid.digits.asSequence().flatMap { digit ->
+            return singleDigit { digit ->
                 lines.flatMap { line ->
                     boxes.mapNotNull { box ->
                         grid.analyze(line.toSet(), box.toSet(), digit)
@@ -191,6 +189,9 @@ sealed interface Technique {
         override fun toString() = "Locked Candidates"
     }
 }
+
+fun singleDigit(block: (digit: Char) -> Sequence<Hint>): Sequence<Hint> =
+    Grid.digits.asSequence().flatMap(block)
 
 private fun tupleString(n: Int): String {
     require(n >= 2)
