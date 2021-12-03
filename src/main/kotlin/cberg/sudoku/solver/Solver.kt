@@ -5,7 +5,7 @@ import cberg.sudoku.solver.Technique.*
 
 class Solver {
     fun solve(input: String): Solution {
-        val game = Game(input).writePencilMarks()
+        val game = Grid(input).setAllCandidates()
 
         if (game.isInvalidPuzzle()) {
             return InvalidPuzzle
@@ -13,36 +13,36 @@ class Solver {
 
         val solvedGame = solve(game)
 
-        return if (solvedGame.squares.any(Square::isEmpty)) {
+        return if (solvedGame.cells.any(Cell::isEmpty)) {
             TooHard
         } else {
             UniqueSolution(solvedGame.toString())
         }
     }
 
-    private fun Game.isInvalidPuzzle() = insufficientGivens()
+    private fun Grid.isInvalidPuzzle() = insufficientGivens()
             || duplicateGivens()
             || noCandidate()
             || missingCandidate()
 
-    private fun Game.insufficientGivens() = squares.count(Square::isNotEmpty) < 17
+    private fun Grid.insufficientGivens() = cells.count(Cell::isNotEmpty) < 17
 
-    private fun Game.duplicateGivens() = groups.any { group ->
-        group.map { position -> squareAt(position) }
-            .filter(Square::isNotEmpty)
-            .groupingBy(Square::value)
+    private fun Grid.duplicateGivens() = houses.any { group ->
+        group.map { position -> cellAt(position) }
+            .filter(Cell::isNotEmpty)
+            .groupingBy(Cell::digit)
             .eachCount()
             .values.any { it > 1 }
     }
 
-    private fun Game.noCandidate() = squares.any { square ->
-        square.isEmpty() && square.marks.isEmpty()
+    private fun Grid.noCandidate() = cells.any { square ->
+        square.isEmpty() && square.candidates.isEmpty()
     }
 
-    private fun Game.missingCandidate() = groups.any { group ->
-        Game.symbols.any { symbol ->
-            group.map { position -> squareAt(position) }
-                .none { square -> symbol == square.value || symbol in square.marks }
+    private fun Grid.missingCandidate() = houses.any { group ->
+        Grid.digits.any { digit ->
+            group.map { position -> cellAt(position) }
+                .none { square -> digit == square.digit || digit in square.candidates }
         }
     }
 
@@ -64,14 +64,14 @@ private val techniques = listOf(
     XWing
 )
 
-fun solve(game: Game) = generateSequence(game, ::applyFirstHint).last()
+fun solve(grid: Grid) = generateSequence(grid, ::applyFirstHint).last()
 
-private fun applyFirstHint(game: Game) = game.hints().firstOrNull()?.applyTo(game)
+private fun applyFirstHint(grid: Grid) = grid.hints().firstOrNull()?.applyTo(grid)
 
-private fun Game.hints(): Sequence<Hint> = techniques.fold(emptySequence()) { hints, technique ->
+private fun Grid.hints(): Sequence<Hint> = techniques.fold(emptySequence()) { hints, technique ->
     hints + technique.analyze(this)
 }
 
-fun Game.filteredHints(): Sequence<Hint> {
+fun Grid.filteredHints(): Sequence<Hint> {
     return HintSequence(hints(), this)
 }

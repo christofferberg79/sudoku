@@ -1,111 +1,110 @@
 package cberg.sudoku.game
 
-import cberg.sudoku.game.Game.Companion.symbols
+import cberg.sudoku.game.Grid.Companion.digits
 
-data class Square(
+data class Cell(
     val position: Position,
-    val value: Char?,
-    val marks: Set<Char> = emptySet()
+    val digit: Char?,
+    val candidates: Set<Char> = emptySet()
 )
 
-fun Square.isEmpty() = value == null
-fun Square.isNotEmpty() = value != null
+fun Cell.isEmpty() = digit == null
+fun Cell.isNotEmpty() = digit != null
 
-data class Game(
-    val squares: List<Square>
+data class Grid(
+    val cells: List<Cell>
 ) {
     init {
-        require(squares.size == 81)
+        require(cells.size == 81)
     }
 
-    override fun toString() = squares.joinToString(separator = "") { s -> "${s.value ?: '.'}" }
+    override fun toString() = cells.joinToString(separator = "") { s -> "${s.digit ?: '.'}" }
 
     companion object {
-        val symbols = ('1'..'9').toSet()
+        val digits = ('1'..'9').toSet()
     }
 }
 
-fun Game.squareAt(position: Position) = squares[position.index]
+fun Grid.cellAt(position: Position) = cells[position.index]
 
-fun Game(input: String): Game {
-    val squares = List(81) { index ->
+fun Grid(input: String): Grid {
+    val cells = List(81) { index ->
         val char = input.getOrNull(index)
-        val value = if (char in symbols) char else null
-        Square(Position(index), value)
+        val digit = if (char in digits) char else null
+        Cell(Position(index), digit)
     }
 
-    return Game(squares)
+    return Grid(cells)
 }
 
-fun Game.setValue(position: Position, char: Char): Game {
-    val square = squareAt(position)
-    if (square.value == char) {
+fun Grid.setDigit(position: Position, char: Char): Grid {
+    val cell = cellAt(position)
+    if (cell.digit == char) {
         return this
     }
 
-    return updateSquare(position) {
-        copy(value = char, marks = emptySet())
+    return updateCell(position) {
+        copy(digit = char, candidates = emptySet())
     }
 }
 
-fun Game.erase(position: Position): Game {
-    val square = squareAt(position)
-    if (square.isEmpty() && square.marks.isEmpty()) {
+fun Grid.erase(position: Position): Grid {
+    val cell = cellAt(position)
+    if (cell.isEmpty() && cell.candidates.isEmpty()) {
         return this
     }
 
-    return updateSquare(position) {
-        copy(value = null, marks = emptySet())
+    return updateCell(position) {
+        copy(digit = null, candidates = emptySet())
     }
 }
 
-fun Game.toggleMark(position: Position, char: Char): Game {
-    if (squareAt(position).isNotEmpty()) {
+fun Grid.toggleCandidate(position: Position, char: Char): Grid {
+    if (cellAt(position).isNotEmpty()) {
         return this
     }
 
-    return updateSquare(position) {
-        copy(marks = if (char in marks) marks - char else marks + char)
+    return updateCell(position) {
+        copy(candidates = if (char in candidates) candidates - char else candidates + char)
     }
 }
 
-fun Game.setValueAndEraseMarks(position: Position, char: Char): Game {
-    val newGame = setValue(position, char)
+fun Grid.setDigitAndEraseCandidates(position: Position, char: Char): Grid {
+    val newGame = setDigit(position, char)
     if (newGame == this) {
         return this
     }
 
-    val affected = affectedBy(position)
-    return newGame.updateSquares(affected) { copy(marks = marks - char) }
+    return newGame.updateCells(position.peers()) { copy(candidates = candidates - char) }
 }
 
-fun Game.eraseMark(position: Position, char: Char): Game {
-    val square = squareAt(position)
-    if (char !in square.marks) {
+fun Grid.eraseCandidates(position: Position, char: Char): Grid {
+    val cell = cellAt(position)
+    if (char !in cell.candidates) {
         return this
     }
-    return updateSquare(position) {
-        copy(marks = marks - char)
+    return updateCell(position) {
+        copy(candidates = candidates - char)
     }
 }
 
-private fun Game.updateSquare(position: Position, transform: Square.() -> Square) =
-    copy(squares = squares.map { square ->
-        if (square.position == position) transform(square) else square
+private fun Grid.updateCell(position: Position, transform: Cell.() -> Cell) =
+    copy(cells = cells.map { cell ->
+        if (cell.position == position) transform(cell) else cell
     })
 
-private fun Game.updateSquares(positions: Set<Position>, transform: Square.() -> Square) =
-    copy(squares = squares.map { square ->
-        if (square.position in positions) transform(square) else square
+private fun Grid.updateCells(positions: Set<Position>, transform: Cell.() -> Cell) =
+    copy(cells = cells.map { cell ->
+        if (cell.position in positions) transform(cell) else cell
     })
 
-fun Game.writePencilMarks() = copy(squares = squares.map { square ->
-    if (square.isEmpty()) {
-        val excludedValues = affectedBy(square.position)
-            .mapNotNull { position -> squareAt(position).value }.toSet()
-        square.copy(marks = symbols - excludedValues)
+fun Grid.setAllCandidates() = copy(cells = cells.map { cell ->
+    if (cell.isEmpty()) {
+        val digitsOfPeers = cell.position.peers()
+            .mapNotNull { position -> cellAt(position).digit }.toSet()
+        cell.copy(candidates = digits - digitsOfPeers)
     } else {
-        square
+        cell
     }
 })
 
@@ -115,15 +114,15 @@ sealed class GameStatus {
     object IncorrectSolution : GameStatus()
 }
 
-fun Game.getStatus(): GameStatus = when {
-    squares.any(Square::isEmpty) -> GameStatus.NotDone
+fun Grid.getStatus(): GameStatus = when {
+    cells.any(Cell::isEmpty) -> GameStatus.NotDone
     isCorrect() -> GameStatus.CorrectSolution
     else -> GameStatus.IncorrectSolution
 }
 
-private fun Game.isCorrect(): Boolean {
-    return groups.all { group ->
-        group.map { position -> squareAt(position).value }.containsAll(symbols)
+private fun Grid.isCorrect(): Boolean {
+    return houses.all { group ->
+        group.map { position -> cellAt(position).digit }.containsAll(digits)
     }
 }
 
@@ -134,13 +133,13 @@ private fun Position(index: Int) = Position(row = index / n, col = index % n)
 private val positions = List(n * n) { index -> Position(index) }
 val rows = List(n) { row -> positions.filter { it.row == row } }
 val cols = List(n) { col -> positions.filter { it.col == col } }
-val blocks = List(n) { block -> positions.filter { it.block == block } }
-val groups = (rows + cols + blocks).asSequence()
+val boxes = List(n) { block -> positions.filter { it.block == block } }
+val houses = (rows + cols + boxes).asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
-private fun affectedBy(position: Position) = buildSet {
-    addAll(rows[position.row])
-    addAll(cols[position.col])
-    addAll(blocks[position.block])
-    remove(position)
+private fun Position.peers() = buildSet {
+    this.addAll(rows[row])
+    this.addAll(cols[col])
+    this.addAll(boxes[block])
+    this.remove(this@peers)
 }

@@ -22,26 +22,26 @@ import cberg.sudoku.game.*
 
 
 sealed interface Technique {
-    fun analyze(game: Game): Sequence<Hint>
+    fun analyze(grid: Grid): Sequence<Hint>
 
     object NakedSingle : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = game.squares.asSequence()
-            .filter { square -> square.marks.size == 1 }
+        override fun analyze(grid: Grid): Sequence<Hint> = grid.cells.asSequence()
+            .filter { square -> square.candidates.size == 1 }
             .map { square ->
                 val position = square.position
-                val value = square.marks.single()
-                Hint(Action.SetValue(position, value), Reason(position, value), this)
+                val value = square.candidates.single()
+                Hint(Action.SetDigit(position, value), Reason(position, value), this)
             }
 
         override fun toString() = "Naked Single"
     }
 
     object HiddenSingle : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = groups.flatMap { group ->
-            Game.symbols.asSequence().mapNotNull { symbol ->
-                group.singleOrNull { position -> symbol in game.squareAt(position).marks }
+        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { group ->
+            Grid.digits.asSequence().mapNotNull { digit ->
+                group.singleOrNull { position -> digit in grid.cellAt(position).candidates }
                     ?.let { position ->
-                        Hint(Action.SetValue(position, symbol), Reason(position, symbol), this)
+                        Hint(Action.SetDigit(position, digit), Reason(position, digit), this)
                     }
             }
         }
@@ -50,8 +50,8 @@ sealed interface Technique {
     }
 
     data class NakedTuple(private val n: Int) : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = groups.flatMap { group ->
-            game.emptySquaresOf(group)
+        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { group ->
+            grid.emptySquaresOf(group)
                 .tuplesOfSize(n)
                 .associateWith { squares -> squares.getMarks() }
                 .filterValues { marks -> marks.size == n }
@@ -59,9 +59,9 @@ sealed interface Technique {
                     val positions = positionsOf(squares)
                     val actions = group
                         .filterNot { position -> position in positions }
-                        .associateWith { position -> marks.intersect(game.squareAt(position).marks) }
+                        .associateWith { position -> marks.intersect(grid.cellAt(position).candidates) }
                         .filterValues { marksToErase -> marksToErase.isNotEmpty() }
-                        .map { (position, marksToErase) -> Action.EraseMarks(position, marksToErase.toSet()) }
+                        .map { (position, marksToErase) -> Action.EraseCandidates(position, marksToErase.toSet()) }
                     if (actions.isNotEmpty()) {
                         val reason = Reason(positions, marks)
                         Hint(actions, reason, this)
@@ -75,8 +75,8 @@ sealed interface Technique {
     }
 
     data class HiddenTuple(private val n: Int) : Technique {
-        override fun analyze(game: Game): Sequence<Hint> = groups.flatMap { group ->
-            val emptySquares = game.emptySquaresOf(group)
+        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { group ->
+            val emptySquares = grid.emptySquaresOf(group)
 
             emptySquares
                 .getMarks()
@@ -86,9 +86,9 @@ sealed interface Technique {
                 .filterValues { squares -> squares.size == n }
                 .mapNotNull { (tuple, squares) ->
                     val actions = squares
-                        .associate { square -> square.position to square.marks - tuple }
+                        .associate { square -> square.position to square.candidates - tuple }
                         .filterValues { marksToErase -> marksToErase.isNotEmpty() }
-                        .map { (position, marksToErase) -> Action.EraseMarks(position, marksToErase) }
+                        .map { (position, marksToErase) -> Action.EraseCandidates(position, marksToErase) }
                     if (actions.isNotEmpty()) {
                         val reason = Reason(positionsOf(squares), tuple)
                         Hint(actions, reason, this)
@@ -102,35 +102,35 @@ sealed interface Technique {
     }
 
     object XWing : Technique {
-        override fun analyze(game: Game) =
-            analyze(game, rows, { row }, cols, { col }) + analyze(game, cols, { col }, rows, { row })
+        override fun analyze(grid: Grid) =
+            analyze(grid, rows, { row }, cols, { col }) + analyze(grid, cols, { col }, rows, { row })
 
         private fun analyze(
-            game: Game,
+            grid: Grid,
             primaryGroups: List<List<Position>>,
             primaryIndex: Position.() -> Int,
             secondaryGroups: List<List<Position>>,
             secondaryIndex: Position.() -> Int
-        ): Sequence<Hint> = Game.symbols.asSequence().flatMap { symbol ->
+        ): Sequence<Hint> = Grid.digits.asSequence().flatMap { digit ->
             primaryGroups
-                .map { primaryGroup -> game.emptySquaresOf(primaryGroup).filter { square -> symbol in square.marks } }
+                .map { primaryGroup -> grid.emptySquaresOf(primaryGroup).filter { square -> digit in square.candidates } }
                 .filter { primaryGroup -> primaryGroup.size == 2 }
                 .groupBy { primaryGroup -> primaryGroup.map { square -> square.position.secondaryIndex() }.toSet() }
                 .filterValues { primaryGroups -> primaryGroups.size == 2 }
                 .mapNotNull { (secondaryIndices, primaryGroups) ->
-                    // each entry has 2 primaryGroups with the symbol in the same 2 secondaryGroups
+                    // each entry has 2 primaryGroups with the digit in the same 2 secondaryGroups
                     check(primaryGroups.size == 2 && secondaryIndices.size == 2)
                     val primaryIndices =
                         primaryGroups.map { primaryGroup -> primaryGroup.first().position.primaryIndex() }.toSet()
                     check(primaryIndices.size == 2)
                     val actions = secondaryIndices.flatMap { secondaryIndex ->
                         secondaryGroups[secondaryIndex].filterNot { position -> position.primaryIndex() in primaryIndices }
-                            .map { position -> game.squareAt(position) }
-                            .filter { square -> square.isEmpty() && symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
+                            .map { position -> grid.cellAt(position) }
+                            .filter { square -> square.isEmpty() && digit in square.candidates }
+                            .map { square -> Action.EraseCandidates(square.position, digit) }
                     }
                     if (actions.isNotEmpty()) {
-                        val reason = Reason(primaryGroups.flatMap { primaryGroup -> positionsOf(primaryGroup) }, symbol)
+                        val reason = Reason(primaryGroups.flatMap { primaryGroup -> positionsOf(primaryGroup) }, digit)
                         Hint(actions, reason, this)
                     } else {
                         null
@@ -142,32 +142,32 @@ sealed interface Technique {
     }
 
     object GroupGroupInteraction : Technique {
-        override fun analyze(game: Game): Sequence<Hint> =
-            analyze(game, blocks, rows, Position::row) +
-                    analyze(game, blocks, cols, Position::col) +
-                    analyze(game, rows, blocks, Position::block) +
-                    analyze(game, cols, blocks, Position::block)
+        override fun analyze(grid: Grid): Sequence<Hint> =
+            analyze(grid, boxes, rows, Position::row) +
+                    analyze(grid, boxes, cols, Position::col) +
+                    analyze(grid, rows, boxes, Position::block) +
+                    analyze(grid, cols, boxes, Position::block)
 
         private fun analyze(
-            game: Game,
+            grid: Grid,
             primaryGroups: List<List<Position>>,
             secondaryGroup: List<List<Position>>,
             secondaryIndexSelector: (Position) -> Int
-        ) = Game.symbols.asSequence().flatMap { symbol ->
+        ) = Grid.digits.asSequence().flatMap { digit ->
             primaryGroups.asSequence()
-                .map { primaryGroup -> game.emptySquaresOf(primaryGroup).filter { square -> symbol in square.marks } }
+                .map { primaryGroup -> grid.emptySquaresOf(primaryGroup).filter { square -> digit in square.candidates } }
                 .filter { squares -> squares.size > 1 }
                 .mapNotNull { squares ->
                     val positions = positionsOf(squares)
                     val secondaryIndicesInPrimaryGroupWithSymbol = positions.map(secondaryIndexSelector).toSet()
                     val actions = secondaryIndicesInPrimaryGroupWithSymbol.singleOrNull()?.let { singleIndex ->
-                        game.emptySquaresOf(secondaryGroup[singleIndex])
+                        grid.emptySquaresOf(secondaryGroup[singleIndex])
                             .filter { square -> square.position !in positions }
-                            .filter { square -> symbol in square.marks }
-                            .map { square -> Action.EraseMarks(square.position, symbol) }
+                            .filter { square -> digit in square.candidates }
+                            .map { square -> Action.EraseCandidates(square.position, digit) }
                     } ?: emptyList()
                     if (actions.isNotEmpty()) {
-                        Hint(actions, Reason(positions, symbol), this)
+                        Hint(actions, Reason(positions, digit), this)
                     } else {
                         null
                     }
@@ -187,16 +187,16 @@ private fun tupleString(n: Int): String {
     }
 }
 
-private fun Game.emptySquaresOf(group: List<Position>) =
-    group.map { position -> squareAt(position) }
+private fun Grid.emptySquaresOf(group: List<Position>) =
+    group.map { position -> cellAt(position) }
         .filter { square -> square.isEmpty() }
 
-private fun Square.containsMarksIn(tuple: Set<Char>) = marks.any { mark -> mark in tuple }
+private fun Cell.containsMarksIn(tuple: Set<Char>) = candidates.any { mark -> mark in tuple }
 
-private fun positionsOf(squares: Iterable<Square>) = squares.map { square -> square.position }
+private fun positionsOf(squares: Iterable<Cell>) = squares.map { square -> square.position }
 
-private fun Iterable<Square>.getMarks(): Set<Char> = fold(mutableSetOf()) { marks, square ->
-    marks.apply { addAll(square.marks) }
+private fun Iterable<Cell>.getMarks(): Set<Char> = fold(mutableSetOf()) { marks, square ->
+    marks.apply { addAll(square.candidates) }
 }
 
 private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<List<E>> {

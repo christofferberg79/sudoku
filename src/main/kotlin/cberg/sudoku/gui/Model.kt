@@ -15,44 +15,44 @@ data class Settings(
 )
 
 class Model(input: String) {
-    private var initialGame by mutableStateOf(Game(input))
+    private var initialGrid by mutableStateOf(Grid(input))
 
-    var game by mutableStateOf(initialGame)
+    var grid by mutableStateOf(initialGrid)
         private set
 
-    val given by derivedStateOf { initialGame.squares.filter { it.isNotEmpty() }.map { it.position }.toSet() }
+    val given by derivedStateOf { initialGrid.cells.filter { it.isNotEmpty() }.map { it.position }.toSet() }
 
     var settings by mutableStateOf(Settings())
         private set
 
-    val hints by derivedStateOf { game.filteredHints() }
+    val hints by derivedStateOf { grid.filteredHints() }
 
-    val gameStatus by derivedStateOf { game.getStatus() }
+    val gameStatus by derivedStateOf { grid.getStatus() }
 
     var analyzing by mutableStateOf<Char?>(null)
 
-    private inline fun updateGame(update: Game.() -> Game) {
-        game = game.update()
+    private inline fun updateGrid(update: Grid.() -> Grid) {
+        grid = grid.update()
     }
 
     private inline fun updateSettings(update: Settings.() -> Settings) {
         settings = settings.update()
     }
 
-    fun reset() = updateGame { initialGame }
+    fun reset() = updateGrid { initialGrid }
 
     fun writeChar(position: Position, char: Char) {
         if (position in given) {
             return
         }
 
-        updateGame {
+        updateGrid {
             if (settings.pencil) {
-                toggleMark(position, char)
+                toggleCandidate(position, char)
             } else if (settings.autoErasePencilMarks) {
-                setValueAndEraseMarks(position, char)
+                setDigitAndEraseCandidates(position, char)
             } else {
-                setValue(position, char)
+                setDigit(position, char)
             }
         }
     }
@@ -62,13 +62,13 @@ class Model(input: String) {
             return
         }
 
-        updateGame {
+        updateGrid {
             erase(position)
         }
     }
 
-    fun writePencilMarks() = updateGame {
-        writePencilMarks()
+    fun writePencilMarks() = updateGrid {
+        setAllCandidates()
     }
 
     fun togglePencil() = updateSettings {
@@ -79,16 +79,16 @@ class Model(input: String) {
         copy(autoErasePencilMarks = !autoErasePencilMarks)
     }
 
-    fun solve() = updateGame {
+    fun solve() = updateGrid {
         solve(this)
     }
 
-    fun apply(hint: Hint) = updateGame {
+    fun apply(hint: Hint) = updateGrid {
         hint.applyTo(this)
     }
 
     fun startNewGame(gameString: String) {
-        initialGame = Game(gameString)
+        initialGrid = Grid(gameString)
         reset()
     }
 

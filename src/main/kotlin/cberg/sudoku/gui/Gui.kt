@@ -37,7 +37,7 @@ fun gui() = singleWindowApplication(title = "Sudoku") {
 
 @Composable
 fun Sudoku(model: Model) {
-    val game = model.game
+    val game = model.grid
     val settings = model.settings
 
     Column(
@@ -45,7 +45,7 @@ fun Sudoku(model: Model) {
             .padding(10.dp)
             .onKeyEvent { event ->
                 val char = event.key.toSudokuChar()
-                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Game.symbols) {
+                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Grid.digits) {
                     checkNotNull(char)
                     model.analyze(char)
                     return@onKeyEvent true
@@ -56,7 +56,7 @@ fun Sudoku(model: Model) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Game(
-                game = game,
+                grid = game,
                 given = model.given,
                 analyzing = model.analyzing,
                 onType = model::writeChar,
@@ -128,13 +128,13 @@ private fun Key.toSudokuChar() = when (this) {
 
 @Composable
 fun Game(
-    game: Game,
+    grid: Grid,
     given: Set<Position>,
     analyzing: Char?,
     onType: (Position, Char) -> Unit,
     onDelete: (Position) -> Unit
 ) {
-    val focusRequesters = remember { game.squares.associate { square -> square.position to FocusRequester() } }
+    val focusRequesters = remember { grid.cells.associate { square -> square.position to FocusRequester() } }
 
     SudokuGrid(
         size = 468.dp,
@@ -143,7 +143,7 @@ fun Game(
     ) { position ->
         val focusRequester = focusRequesters.getValue(position)
         val focusManager = LocalFocusManager.current
-        val square = game.squareAt(position)
+        val square = grid.cellAt(position)
         Square(
             modifier = Modifier.focusOrder(focusRequester) {
                 up = focusRequesters.getValue(position.up())
@@ -151,7 +151,7 @@ fun Game(
                 left = focusRequesters.getValue(position.left())
                 right = focusRequesters.getValue(position.right())
             },
-            square = square,
+            cell = square,
             given = square.position in given,
             analyzing = analyzing,
             onInput = { input ->
@@ -203,15 +203,15 @@ private fun Grid(
 @Composable
 fun Square(
     modifier: Modifier = Modifier,
-    square: Square,
+    cell: Cell,
     given: Boolean,
     analyzing: Char?,
     onInput: (SquareInput) -> Unit,
     onClick: () -> Unit
 ) {
     val background = when {
-        square.isNotEmpty() && square.value == analyzing -> Color.Blue
-        square.isEmpty() && analyzing in square.marks -> Color.Green
+        cell.isNotEmpty() && cell.digit == analyzing -> Color.Blue
+        cell.isEmpty() && analyzing in cell.candidates -> Color.Green
         else -> Color.White
     }
     Box(modifier
@@ -227,19 +227,19 @@ fun Square(
         .fillMaxSize()
         .padding(1.dp)
     ) {
-        if (square.isEmpty()) {
-            SquareMarks(square)
+        if (cell.isEmpty()) {
+            SquareMarks(cell)
         } else {
-            SquareValue(square, given)
+            SquareValue(cell, given)
         }
     }
 }
 
 @Composable
-fun SquareMarks(square: Square) {
+fun SquareMarks(cell: Cell) {
     Grid { row, col ->
         val c = '1' + row * 3 + col
-        if (c in square.marks) {
+        if (c in cell.candidates) {
             Text(
                 modifier = Modifier.align(Alignment.Center),
                 text = "$c",
@@ -250,9 +250,9 @@ fun SquareMarks(square: Square) {
 }
 
 @Composable
-fun BoxScope.SquareValue(square: Square, given: Boolean) {
+fun BoxScope.SquareValue(cell: Cell, given: Boolean) {
     Text(
-        text = "${square.value}",
+        text = "${cell.digit}",
         modifier = Modifier.align(Alignment.Center),
         fontSize = 40.sp,
         color = if (given) Color.Black else Color.Blue
@@ -321,7 +321,7 @@ sealed class SquareInput {
 private fun KeyEvent.toSquareInput(): SquareInput? = when {
     isTypedEvent -> {
         when (val char = utf16CodePoint.toChar()) {
-            in Game.symbols -> SquareInput.Value(char)
+            in Grid.digits -> SquareInput.Value(char)
             else -> null
         }
     }

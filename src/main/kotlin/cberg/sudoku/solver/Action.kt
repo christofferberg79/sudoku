@@ -1,27 +1,27 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.Game
+import cberg.sudoku.game.Grid
 import cberg.sudoku.game.Position
-import cberg.sudoku.game.eraseMark
-import cberg.sudoku.game.setValueAndEraseMarks
+import cberg.sudoku.game.eraseCandidates
+import cberg.sudoku.game.setDigitAndEraseCandidates
 
 sealed interface Action {
-    fun applyTo(game: Game): Game
+    fun applyTo(grid: Grid): Grid
     val position: Position
 
-    data class SetValue(override val position: Position, val value: Char) : Action {
-        override fun applyTo(game: Game) = game.setValueAndEraseMarks(position, value)
-        override fun toString() = "$position => set value $value"
+    data class SetDigit(override val position: Position, val digit: Char) : Action {
+        override fun applyTo(grid: Grid) = grid.setDigitAndEraseCandidates(position, digit)
+        override fun toString() = "$position => set digit $digit"
     }
 
-    data class EraseMarks(override val position: Position, val marks: Set<Char>) : Action {
+    data class EraseCandidates(override val position: Position, val candidates: Set<Char>) : Action {
         constructor(position: Position, mark: Char) : this(position, setOf(mark))
 
         init {
-            require(marks.isNotEmpty())
+            require(candidates.isNotEmpty())
         }
 
-        override fun applyTo(game: Game) = marks.fold(game) { g, m -> g.eraseMark(position, m) }
-        override fun toString() = "$position => erase marks ${marks.joinToString()}"
+        override fun applyTo(grid: Grid) = candidates.fold(grid) { g, m -> g.eraseCandidates(position, m) }
+        override fun toString() = "$position => erase candidates ${candidates.joinToString()}"
     }
 }
