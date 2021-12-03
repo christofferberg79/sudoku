@@ -9,13 +9,13 @@ sealed interface Action {
     fun applyTo(grid: Grid): Grid
     val position: Position
 
-    data class SetDigit(override val position: Position, val digit: Char) : Action {
+    data class SetDigit(override val position: Position, val digit: Int) : Action {
         override fun applyTo(grid: Grid) = grid.setDigitAndEraseCandidates(position, digit)
         override fun toString() = "$position => set digit $digit"
     }
 
-    data class EraseCandidates(override val position: Position, val candidates: Set<Char>) : Action {
-        constructor(position: Position, candidate: Char) : this(position, setOf(candidate))
+    data class EraseCandidates(override val position: Position, val candidates: Set<Int>) : Action {
+        constructor(position: Position, candidate: Int) : this(position, setOf(candidate))
 
         init {
             require(candidates.isNotEmpty())

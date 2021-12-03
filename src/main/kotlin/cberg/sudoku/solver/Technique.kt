@@ -159,7 +159,7 @@ sealed interface Technique {
             }
         }
 
-        private fun Grid.analyze(line: Set<Position>, box: Set<Position>, digit: Char): Hint? {
+        private fun Grid.analyze(line: Set<Position>, box: Set<Position>, digit: Int): Hint? {
             val intersection = box.intersect(line)
             if (intersection.none { it.hasCandidate(digit) }) {
                 return null
@@ -190,7 +190,7 @@ sealed interface Technique {
     }
 }
 
-fun singleDigit(block: (digit: Char) -> Sequence<Hint>): Sequence<Hint> =
+fun singleDigit(block: (digit: Int) -> Sequence<Hint>): Sequence<Hint> =
     Grid.digits.asSequence().flatMap(block)
 
 private fun tupleString(n: Int): String {
@@ -206,11 +206,11 @@ private fun Grid.emptyCellsOf(house: List<Position>) =
     house.map { position -> cellAt(position) }
         .filter { cell -> cell.isEmpty() }
 
-private fun Cell.containsMarksIn(tuple: Set<Char>) = candidates.any { mark -> mark in tuple }
+private fun Cell.containsMarksIn(tuple: Set<Int>) = candidates.any { mark -> mark in tuple }
 
 private fun positionsOf(cells: Iterable<Cell>) = cells.map { cell -> cell.position }
 
-private fun Iterable<Cell>.getMarks(): Set<Char> = fold(mutableSetOf()) { marks, cell ->
+private fun Iterable<Cell>.getMarks(): Set<Int> = fold(mutableSetOf()) { marks, cell ->
     marks.apply { addAll(cell.candidates) }
 }
 

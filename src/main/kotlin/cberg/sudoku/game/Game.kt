@@ -4,8 +4,8 @@ import cberg.sudoku.game.Grid.Companion.digits
 
 data class Cell(
     val position: Position,
-    val digit: Char?,
-    val candidates: Set<Char> = emptySet()
+    val digit: Int?,
+    val candidates: Set<Int> = emptySet()
 )
 
 fun Cell.isEmpty() = digit == null
@@ -21,32 +21,33 @@ data class Grid(
     override fun toString() = cells.joinToString(separator = "") { s -> "${s.digit ?: '.'}" }
 
     companion object {
-        val digits = ('1'..'9').toSet()
+        val digits = (1..9).toSet()
     }
 
     fun cellAt(position: Position) = cells[position.index]
 
-    fun Position.hasCandidate(digit: Char) = cells[index].run { isEmpty() && digit in candidates }
+    fun Position.hasCandidate(digit: Int) = cells[index].run { isEmpty() && digit in candidates }
 }
 
 fun Grid(input: String): Grid {
     val cells = List(81) { index ->
-        val char = input.getOrNull(index)
-        val digit = if (char in digits) char else null
+        val digit = input.getOrNull(index)?.digitToIntOrNull()?.let {
+            if (it in digits) it else null
+        }
         Cell(Position(index), digit)
     }
 
     return Grid(cells)
 }
 
-fun Grid.setDigit(position: Position, char: Char): Grid {
+fun Grid.setDigit(position: Position, digit: Int): Grid {
     val cell = cellAt(position)
-    if (cell.digit == char) {
+    if (cell.digit == digit) {
         return this
     }
 
     return updateCell(position) {
-        copy(digit = char, candidates = emptySet())
+        copy(digit = digit, candidates = emptySet())
     }
 }
 
@@ -61,42 +62,42 @@ fun Grid.erase(position: Position): Grid {
     }
 }
 
-fun Grid.toggleCandidate(position: Position, char: Char): Grid {
+fun Grid.toggleCandidate(position: Position, digit: Int): Grid {
     if (cellAt(position).isNotEmpty()) {
         return this
     }
 
     return updateCell(position) {
-        copy(candidates = if (char in candidates) candidates - char else candidates + char)
+        copy(candidates = if (digit in candidates) candidates - digit else candidates + digit)
     }
 }
 
-fun Grid.setDigitAndEraseCandidates(position: Position, char: Char): Grid {
-    val newGame = setDigit(position, char)
+fun Grid.setDigitAndEraseCandidates(position: Position, digit: Int): Grid {
+    val newGame = setDigit(position, digit)
     if (newGame == this) {
         return this
     }
 
-    return newGame.updateCells(position.peers()) { copy(candidates = candidates - char) }
+    return newGame.updateCells(position.peers()) { copy(candidates = candidates - digit) }
 }
 
-fun Grid.eraseCandidate(position: Position, char: Char): Grid {
+fun Grid.eraseCandidate(position: Position, digit: Int): Grid {
     val cell = cellAt(position)
-    if (char !in cell.candidates) {
+    if (digit !in cell.candidates) {
         return this
     }
     return updateCell(position) {
-        copy(candidates = candidates - char)
+        copy(candidates = candidates - digit)
     }
 }
 
-fun Grid.eraseCandidates(position: Position, chars: Set<Char>): Grid {
+fun Grid.eraseCandidates(position: Position, digits: Set<Int>): Grid {
     val cell = cellAt(position)
-    if (chars.none { it in cell.candidates }) {
+    if (digits.none { it in cell.candidates }) {
         return this
     }
     return updateCell(position) {
-        copy(candidates = candidates - chars)
+        copy(candidates = candidates - digits)
     }
 }
 

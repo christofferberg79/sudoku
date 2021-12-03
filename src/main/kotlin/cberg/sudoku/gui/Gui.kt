@@ -44,10 +44,10 @@ fun Sudoku(model: Model) {
         modifier = Modifier
             .padding(10.dp)
             .onKeyEvent { event ->
-                val char = event.key.toSudokuChar()
-                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && char in Grid.digits) {
-                    checkNotNull(char)
-                    model.analyze(char)
+                val digit = event.key.toSudokuDigit()
+                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && digit in Grid.digits) {
+                    checkNotNull(digit)
+                    model.analyze(digit)
                     return@onKeyEvent true
                 }
                 return@onKeyEvent false
@@ -59,7 +59,7 @@ fun Sudoku(model: Model) {
                 grid = game,
                 given = model.given,
                 analyzing = model.analyzing,
-                onType = model::writeChar,
+                onType = model::writeDigit,
                 onDelete = model::erase
             )
 
@@ -113,16 +113,16 @@ fun Sudoku(model: Model) {
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun Key.toSudokuChar() = when (this) {
-    Key.One -> '1'
-    Key.Two -> '2'
-    Key.Three -> '3'
-    Key.Four -> '4'
-    Key.Five -> '5'
-    Key.Six -> '6'
-    Key.Seven -> '7'
-    Key.Eight -> '8'
-    Key.Nine -> '9'
+private fun Key.toSudokuDigit() = when (this) {
+    Key.One -> 1
+    Key.Two -> 2
+    Key.Three -> 3
+    Key.Four -> 4
+    Key.Five -> 5
+    Key.Six -> 6
+    Key.Seven -> 7
+    Key.Eight -> 8
+    Key.Nine -> 9
     else -> null
 }
 
@@ -130,8 +130,8 @@ private fun Key.toSudokuChar() = when (this) {
 fun Game(
     grid: Grid,
     given: Set<Position>,
-    analyzing: Char?,
-    onType: (Position, Char) -> Unit,
+    analyzing: Int?,
+    onType: (Position, Int) -> Unit,
     onDelete: (Position) -> Unit
 ) {
     val focusRequesters = remember { grid.cells.associate { square -> square.position to FocusRequester() } }
@@ -156,7 +156,7 @@ fun Game(
             analyzing = analyzing,
             onInput = { input ->
                 when (input) {
-                    is SquareInput.Value -> onType(position, input.value)
+                    is SquareInput.Digit -> onType(position, input.digit)
                     is SquareInput.Delete -> onDelete(position)
                     is SquareInput.Move -> focusManager.moveFocus(input.direction)
                 }
@@ -205,7 +205,7 @@ fun Square(
     modifier: Modifier = Modifier,
     cell: Cell,
     given: Boolean,
-    analyzing: Char?,
+    analyzing: Int?,
     onInput: (SquareInput) -> Unit,
     onClick: () -> Unit
 ) {
@@ -238,11 +238,11 @@ fun Square(
 @Composable
 fun SquareMarks(cell: Cell) {
     Grid { row, col ->
-        val c = '1' + row * 3 + col
-        if (c in cell.candidates) {
+        val digit = 1 + row * 3 + col
+        if (digit in cell.candidates) {
             Text(
                 modifier = Modifier.align(Alignment.Center),
-                text = "$c",
+                text = "$digit",
                 fontSize = 14.sp
             )
         }
@@ -313,15 +313,16 @@ fun Hints(hints: Sequence<Hint>, onClick: (Hint) -> Unit) {
 
 sealed class SquareInput {
     object Delete : SquareInput()
-    data class Value(val value: Char) : SquareInput()
+    data class Digit(val digit: Int) : SquareInput()
     data class Move(val direction: FocusDirection) : SquareInput()
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun KeyEvent.toSquareInput(): SquareInput? = when {
     isTypedEvent -> {
-        when (val char = utf16CodePoint.toChar()) {
-            in Grid.digits -> SquareInput.Value(char)
+        when (val digit = utf16CodePoint.toChar().digitToIntOrNull()) {
+            null -> null
+            in Grid.digits -> SquareInput.Digit(digit)
             else -> null
         }
     }

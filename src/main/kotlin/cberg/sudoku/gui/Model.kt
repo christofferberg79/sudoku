@@ -29,7 +29,7 @@ class Model(input: String) {
 
     val gameStatus by derivedStateOf { grid.getStatus() }
 
-    var analyzing by mutableStateOf<Char?>(null)
+    var analyzing by mutableStateOf<Int?>(null)
 
     private inline fun updateGrid(update: Grid.() -> Grid) {
         grid = grid.update()
@@ -41,18 +41,18 @@ class Model(input: String) {
 
     fun reset() = updateGrid { initialGrid }
 
-    fun writeChar(position: Position, char: Char) {
+    fun writeDigit(position: Position, digit: Int) {
         if (position in given) {
             return
         }
 
         updateGrid {
             if (settings.pencil) {
-                toggleCandidate(position, char)
+                toggleCandidate(position, digit)
             } else if (settings.autoErasePencilMarks) {
-                setDigitAndEraseCandidates(position, char)
+                setDigitAndEraseCandidates(position, digit)
             } else {
-                setDigit(position, char)
+                setDigit(position, digit)
             }
         }
     }
@@ -92,11 +92,11 @@ class Model(input: String) {
         reset()
     }
 
-    fun analyze(char: Char) {
-        analyzing = if (char == analyzing) {
+    fun analyze(digit: Int) {
+        analyzing = if (digit == analyzing) {
             null
         } else {
-            char
+            digit
         }
     }
 }

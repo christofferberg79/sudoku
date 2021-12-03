@@ -18,7 +18,7 @@ class TechniqueTest {
     fun nakedSingle() {
         var grid = Grid("").setAllCandidates()
 
-        val digit = '8'
+        val digit = 8
         val position = r7c3
         grid = grid.eraseCandidates(position, Grid.digits - digit)
 
@@ -33,15 +33,15 @@ class TechniqueTest {
 
         val hints = NakedSingle.analyze(grid.setAllCandidates()).toList()
         assertEquals(2, hints.size)
-        assertContains(hints, Hint(Action.SetDigit(r3c7, '4'), Reason(r3c7, '4'), NakedSingle))
-        assertContains(hints, Hint(Action.SetDigit(r7c3, '3'), Reason(r7c3, '3'), NakedSingle))
+        assertContains(hints, Hint(Action.SetDigit(r3c7, 4), Reason(r3c7, 4), NakedSingle))
+        assertContains(hints, Hint(Action.SetDigit(r7c3, 3), Reason(r7c3, 3), NakedSingle))
     }
 
     @Test
     fun hiddenSingleInColumn() {
         var grid = Grid("").setAllCandidates()
 
-        val digit = '6'
+        val digit = 6
         val position = r5c4
         for (otherPosition in cols[position.col] - position) {
             grid = grid.eraseCandidate(otherPosition, digit)
@@ -56,7 +56,7 @@ class TechniqueTest {
     fun hiddenSingleInRow() {
         var grid = Grid("").setAllCandidates()
 
-        val digit = '4'
+        val digit = 4
         val position = r3c7
         for (otherPosition in rows[position.row] - position) {
             grid = grid.eraseCandidate(otherPosition, digit)
@@ -71,7 +71,7 @@ class TechniqueTest {
     fun hiddenSingleInBox() {
         var grid = Grid("").setAllCandidates()
 
-        val digit = '8'
+        val digit = 8
         val position = r8c3
         for (otherPosition in boxes[position.box] - position) {
             grid = grid.eraseCandidate(otherPosition, digit)
@@ -88,9 +88,9 @@ class TechniqueTest {
 
         val hints = HiddenSingle.analyze(grid.setAllCandidates()).toSet()
         assertEquals(4, hints.size)
-        assertContains(hints, Hint(Action.SetDigit(r3c7, '2'), Reason(r3c7, '2'), HiddenSingle))
-        assertContains(hints, Hint(Action.SetDigit(r7c3, '2'), Reason(r7c3, '2'), HiddenSingle))
-        assertContains(hints, Hint(Action.SetDigit(r6c5, '7'), Reason(r6c5, '7'), HiddenSingle))
-        assertContains(hints, Hint(Action.SetDigit(r8c3, '7'), Reason(r8c3, '7'), HiddenSingle))
+        assertContains(hints, Hint(Action.SetDigit(r3c7, 2), Reason(r3c7, 2), HiddenSingle))
+        assertContains(hints, Hint(Action.SetDigit(r7c3, 2), Reason(r7c3, 2), HiddenSingle))
+        assertContains(hints, Hint(Action.SetDigit(r6c5, 7), Reason(r6c5, 7), HiddenSingle))
+        assertContains(hints, Hint(Action.SetDigit(r8c3, 7), Reason(r8c3, 7 ), HiddenSingle))
     }
 }
