@@ -33,8 +33,6 @@ class TechniqueTest {
 
         val hints = NakedSingle.analyze(grid.setAllCandidates()).toList()
         assertEquals(2, hints.size)
-        val r3c7 = Position(2, 6)
-        val r7c3 = Position(6, 2)
         assertContains(hints, Hint(Action.SetDigit(r3c7, '4'), Reason(r3c7, '4'), NakedSingle))
         assertContains(hints, Hint(Action.SetDigit(r7c3, '3'), Reason(r7c3, '3'), NakedSingle))
     }
