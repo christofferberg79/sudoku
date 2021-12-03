@@ -52,17 +52,19 @@ sealed interface Technique {
         override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
             grid.emptyCellsOf(house)
                 .tuplesOfSize(n)
-                .associateWith { cells -> cells.getMarks() }
-                .filterValues { marks -> marks.size == n }
-                .mapNotNull { (cells, marks) ->
+                .associateWith { cells -> candidatesOf(cells) }
+                .filterValues { candidates -> candidates.size == n }
+                .mapNotNull { (cells, candidates) ->
                     val positions = positionsOf(cells)
                     val actions = house
                         .filterNot { position -> position in positions }
-                        .associateWith { position -> marks.intersect(grid.cellAt(position).candidates) }
-                        .filterValues { marksToErase -> marksToErase.isNotEmpty() }
-                        .map { (position, marksToErase) -> Action.EraseCandidates(position, marksToErase.toSet()) }
+                        .associateWith { position -> candidates.intersect(grid.cellAt(position).candidates) }
+                        .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
+                        .map { (position, candidatesToErase) ->
+                            Action.EraseCandidates(position, candidatesToErase)
+                        }
                     if (actions.isNotEmpty()) {
-                        val reason = Reason(positions, marks)
+                        val reason = Reason(positions, candidates)
                         Hint(actions, reason, this)
                     } else {
                         null
@@ -77,17 +79,16 @@ sealed interface Technique {
         override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
             val emptyCells = grid.emptyCellsOf(house)
 
-            emptyCells
-                .getMarks()
+            candidatesOf(emptyCells)
                 .tuplesOfSize(n)
                 .map { tuple -> tuple.toSet() }
-                .associateWith { tuple -> emptyCells.filter { cell -> cell.containsMarksIn(tuple) } }
+                .associateWith { tuple -> emptyCells.filter { cell -> cell.containsCandidatesIn(tuple) } }
                 .filterValues { cells -> cells.size == n }
                 .mapNotNull { (tuple, cells) ->
                     val actions = cells
                         .associate { cell -> cell.position to cell.candidates - tuple }
-                        .filterValues { marksToErase -> marksToErase.isNotEmpty() }
-                        .map { (position, marksToErase) -> Action.EraseCandidates(position, marksToErase) }
+                        .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
+                        .map { (position, candidatesToErase) -> Action.EraseCandidates(position, candidatesToErase) }
                     if (actions.isNotEmpty()) {
                         val reason = Reason(positionsOf(cells), tuple)
                         Hint(actions, reason, this)
@@ -206,12 +207,13 @@ private fun Grid.emptyCellsOf(house: List<Position>) =
     house.map { position -> cellAt(position) }
         .filter { cell -> cell.isEmpty() }
 
-private fun Cell.containsMarksIn(tuple: Set<Int>) = candidates.any { mark -> mark in tuple }
+private fun Cell.containsCandidatesIn(tuple: Set<Int>) = candidates.any { candidate -> candidate in tuple }
 
 private fun positionsOf(cells: Iterable<Cell>) = cells.map { cell -> cell.position }
 
-private fun Iterable<Cell>.getMarks(): Set<Int> = fold(mutableSetOf()) { marks, cell ->
-    marks.apply { addAll(cell.candidates) }
+@OptIn(ExperimentalStdlibApi::class)
+private fun candidatesOf(cells: Iterable<Cell>): Set<Int> = buildSet {
+    cells.forEach { cell -> addAll(cell.candidates) }
 }
 
 private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<List<E>> {
