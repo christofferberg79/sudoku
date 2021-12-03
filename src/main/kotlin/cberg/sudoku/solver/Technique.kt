@@ -25,13 +25,12 @@ sealed interface Technique {
     fun analyze(grid: Grid): Sequence<Hint>
 
     object NakedSingle : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = grid.cells.asSequence()
-            .filter { cell -> cell.candidates.size == 1 }
-            .map { cell ->
+        override fun analyze(grid: Grid): Sequence<Hint> = grid.cells.asSequence().mapNotNull { cell ->
+            cell.candidates.singleOrNull()?.let { candidate ->
                 val position = cell.position
-                val value = cell.candidates.single()
-                Hint(Action.SetDigit(position, value), Reason(position, value), this)
+                Hint(Action.SetDigit(position, candidate), Reason(position, candidate), this)
             }
+        }
 
         override fun toString() = "Naked Single"
     }

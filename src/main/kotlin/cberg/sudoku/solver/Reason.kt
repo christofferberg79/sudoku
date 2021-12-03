@@ -2,9 +2,9 @@ package cberg.sudoku.solver
 
 import cberg.sudoku.game.Position
 
-data class Reason(val positions: List<Position>, val marks: Set<Char>) {
-    constructor(position: Position, mark: Char) : this(listOf(position), setOf(mark))
-    constructor(positions: List<Position>, mark: Char) : this(positions, setOf(mark))
+data class Reason(val positions: List<Position>, val candidates: Set<Char>) {
+    constructor(position: Position, candidate: Char) : this(listOf(position), setOf(candidate))
+    constructor(positions: List<Position>, candidate: Char) : this(positions, setOf(candidate))
 
-    override fun toString() = "$marks at $positions"
+    override fun toString() = "$candidates at $positions"
 }
