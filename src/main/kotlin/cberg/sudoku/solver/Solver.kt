@@ -56,7 +56,7 @@ object TooHard : Solution()
 private val techniques = listOf(
     NakedSingle,
     HiddenSingle,
-    GroupGroupInteraction,
+    LockedCandidates,
     NakedTuple(2),
     HiddenTuple(2),
     NakedTuple(3),

@@ -113,7 +113,9 @@ sealed interface Technique {
             secondaryIndex: Position.() -> Int
         ): Sequence<Hint> = Grid.digits.asSequence().flatMap { digit ->
             primaryGroups
-                .map { primaryGroup -> grid.emptySquaresOf(primaryGroup).filter { square -> digit in square.candidates } }
+                .map { primaryGroup ->
+                    grid.emptySquaresOf(primaryGroup).filter { square -> digit in square.candidates }
+                }
                 .filter { primaryGroup -> primaryGroup.size == 2 }
                 .groupBy { primaryGroup -> primaryGroup.map { square -> square.position.secondaryIndex() }.toSet() }
                 .filterValues { primaryGroups -> primaryGroups.size == 2 }
@@ -141,40 +143,49 @@ sealed interface Technique {
         override fun toString() = "X-Wing"
     }
 
-    object GroupGroupInteraction : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> =
-            analyze(grid, boxes, rows, Position::row) +
-                    analyze(grid, boxes, cols, Position::col) +
-                    analyze(grid, rows, boxes, Position::block) +
-                    analyze(grid, cols, boxes, Position::block)
-
-        private fun analyze(
-            grid: Grid,
-            primaryGroups: List<List<Position>>,
-            secondaryGroup: List<List<Position>>,
-            secondaryIndexSelector: (Position) -> Int
-        ) = Grid.digits.asSequence().flatMap { digit ->
-            primaryGroups.asSequence()
-                .map { primaryGroup -> grid.emptySquaresOf(primaryGroup).filter { square -> digit in square.candidates } }
-                .filter { squares -> squares.size > 1 }
-                .mapNotNull { squares ->
-                    val positions = positionsOf(squares)
-                    val secondaryIndicesInPrimaryGroupWithSymbol = positions.map(secondaryIndexSelector).toSet()
-                    val actions = secondaryIndicesInPrimaryGroupWithSymbol.singleOrNull()?.let { singleIndex ->
-                        grid.emptySquaresOf(secondaryGroup[singleIndex])
-                            .filter { square -> square.position !in positions }
-                            .filter { square -> digit in square.candidates }
-                            .map { square -> Action.EraseCandidates(square.position, digit) }
-                    } ?: emptyList()
-                    if (actions.isNotEmpty()) {
-                        Hint(actions, Reason(positions, digit), this)
-                    } else {
-                        null
-                    }
-                }
+    object LockedCandidates : Technique {
+        override fun analyze(grid: Grid): Sequence<Hint> {
+            return analyze(grid, lines, boxes.asSequence())
         }
 
-        override fun toString() = "Group/Group Interaction"
+        private fun analyze(grid: Grid, lines: Sequence<List<Position>>, boxes: Sequence<List<Position>>): Sequence<Hint> {
+            return Grid.digits.asSequence().flatMap { digit ->
+                lines.flatMap { line ->
+                    boxes.mapNotNull { box ->
+                        grid.analyze(line.toSet(), box.toSet(), digit)
+                    }
+                }
+            }
+        }
+
+        private fun Grid.analyze(line: Set<Position>, box: Set<Position>, digit: Char): Hint? {
+            val intersection = box.intersect(line)
+            if (intersection.none { it.hasCandidate(digit) }) {
+                return null
+            }
+
+            val restOfLine = line - intersection
+            val lineCellsWithCandidate = restOfLine.filter { it.hasCandidate(digit) }
+
+            val restOfBox = box - intersection
+            val boxCellsWithCandidate = restOfBox.filter { it.hasCandidate(digit) }
+
+            val toErase = when {
+                lineCellsWithCandidate.isEmpty() -> boxCellsWithCandidate
+                boxCellsWithCandidate.isEmpty() -> lineCellsWithCandidate
+                else -> emptyList()
+            }
+
+            if (toErase.isEmpty()) {
+                return null
+            }
+
+            val actions = toErase.map { position -> Action.EraseCandidates(position, digit) }
+            val reason = Reason(intersection.toList(), digit)
+            return Hint(actions, reason, this@LockedCandidates)
+        }
+
+        override fun toString() = "Locked Candidates"
     }
 }
 

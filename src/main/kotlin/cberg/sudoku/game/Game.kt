@@ -23,9 +23,11 @@ data class Grid(
     companion object {
         val digits = ('1'..'9').toSet()
     }
-}
 
-fun Grid.cellAt(position: Position) = cells[position.index]
+    fun cellAt(position: Position) = cells[position.index]
+
+    fun Position.hasCandidate(digit: Char) = cells[index].run { isEmpty() && digit in candidates }
+}
 
 fun Grid(input: String): Grid {
     val cells = List(81) { index ->
@@ -134,6 +136,7 @@ private val positions = List(n * n) { index -> Position(index) }
 val rows = List(n) { row -> positions.filter { it.row == row } }
 val cols = List(n) { col -> positions.filter { it.col == col } }
 val boxes = List(n) { block -> positions.filter { it.block == block } }
+val lines = (rows + cols).asSequence()
 val houses = (rows + cols + boxes).asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
