@@ -1,17 +1,17 @@
 package cberg.sudoku.solver
 
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class SolverTest {
-    @Test
+    @org.junit.jupiter.api.Test
     fun completedPuzzle() {
         val input = "974236158638591742125487936316754289742918563589362417867125394253649871491873625"
         testPuzzleWithUniqueSolution(input, input)
     }
 
-    @Test
+    @org.junit.jupiter.api.Test
     fun lastEmptySquare() {
         val input = "2564891733746159829817234565932748617128.6549468591327635147298127958634849362715"
         val solution = "256489173374615982981723456593274861712836549468591327635147298127958634849362715"
