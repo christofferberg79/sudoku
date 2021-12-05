@@ -53,7 +53,7 @@ class UniqueSolution(val solution: String) : Solution()
 object InvalidPuzzle : Solution()
 object TooHard : Solution()
 
-private val techniques = listOf(
+private val techniques = sequenceOf(
     NakedSingle,
     HiddenSingle,
     LockedCandidates,
@@ -66,12 +66,10 @@ private val techniques = listOf(
 
 fun solve(grid: Grid) = generateSequence(grid, ::applyFirstHint).last()
 
-private fun applyFirstHint(grid: Grid) = grid.hints().firstOrNull()?.applyTo(grid)
+private fun applyFirstHint(grid: Grid) = hints(grid).firstOrNull()?.applyTo(grid)
 
-private fun Grid.hints(): Sequence<Hint> = techniques.fold(emptySequence()) { hints, technique ->
-    hints + technique.analyze(this)
-}
+private fun hints(grid: Grid): Sequence<Hint> = techniques.flatMap { technique -> technique.analyze(grid) }
 
-fun Grid.filteredHints(): Sequence<Hint> {
-    return HintSequence(hints(), this)
+fun filteredHints(grid: Grid): Sequence<Hint> {
+    return HintSequence(hints(grid), grid)
 }

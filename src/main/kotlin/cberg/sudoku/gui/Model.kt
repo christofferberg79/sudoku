@@ -25,7 +25,7 @@ class Model(input: String) {
     var settings by mutableStateOf(Settings())
         private set
 
-    val hints by derivedStateOf { grid.filteredHints() }
+    val hints by derivedStateOf { filteredHints(grid) }
 
     val gameStatus by derivedStateOf { grid.getStatus() }
 
