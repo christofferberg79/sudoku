@@ -124,7 +124,7 @@ class SolverTest {
         val input = ".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37."
         testTooHardPuzzle(input)
 
-        // TODO when solver is improved (Sashimi X-Wing eliminates 6 at r9c2 and r8c3):
+        // TODO when solver is improved (Sashimi X-Wing (row 3 and 8) eliminates 6 at r1c3, r8c3 and r9c2):
 //        val solution = "479132586538764912162598437687915243913427865254683791726349158345871629891256374"
 //        testPuzzleWithUniqueSolution(input, solution)
     }
