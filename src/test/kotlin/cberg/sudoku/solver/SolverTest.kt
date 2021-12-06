@@ -122,11 +122,8 @@ class SolverTest {
     @Test
     fun sudokuDotComExpert3() {
         val input = ".7...2.8....76......259....6........9.3.2..6..5....7.....3..1...4.8.1..9......37."
-        testTooHardPuzzle(input)
-
-        // TODO when solver is improved (Sashimi X-Wing (row 3 and 8) eliminates 6 at r1c3, r8c3 and r9c2):
-//        val solution = "479132586538764912162598437687915243913427865254683791726349158345871629891256374"
-//        testPuzzleWithUniqueSolution(input, solution)
+        val solution = "479132586538764912162598437687915243913427865254683791726349158345871629891256374"
+        testPuzzleWithUniqueSolution(input, solution)
     }
 
     @Test
@@ -146,21 +143,15 @@ class SolverTest {
     @Test
     fun sudokuDotComExpert6() {
         val input = "...........5...4.93..8...6..3...6....49...2.7..7..5.1.4.6.5.....1..9.7....3..2..."
-        testTooHardPuzzle(input)
-
-        // TODO when solver is improved (Sashimi X-Wing eliminates 7 at r7c2 and r9c5):
-//        val solution = "962514378185367429374829561531276984649138257827945613496751832218693745753482196"
-//        testPuzzleWithUniqueSolution(input, solution)
+        val solution = "962514378185367429374829561531276984649138257827945613496751832218693745753482196"
+        testPuzzleWithUniqueSolution(input, solution)
     }
 
     @Test
     fun sudokuDotComExpert7() {
         val input = "5..9...7..6....9.48.......5751.....86..2..5...8......19.....3......4.......5.1..."
-        testTooHardPuzzle(input)
-
-        // TODO when solver is improved (Sashimi X-Wing (row 1 and 7) eliminates 1 at r8c7):
-//        val solution = "514962873367185924829374165751496238693218547482753691945827316138649752276531489"
-//        testPuzzleWithUniqueSolution(input, solution)
+        val solution = "514962873367185924829374165751496238693218547482753691945827316138649752276531489"
+        testPuzzleWithUniqueSolution(input, solution)
     }
 
     @Test

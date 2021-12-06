@@ -141,6 +141,42 @@ sealed interface Technique {
         override fun toString() = "X-Wing"
     }
 
+    object SashimiXWing : Technique {
+        override fun analyze(grid: Grid) = analyze(grid, rows, Position::col) + analyze(grid, cols, Position::row)
+
+        private fun analyze(grid: Grid, lines: List<List<Position>>, coordinate: Position.() -> Int) =
+            singleDigit { digit ->
+                lines.asSequence()
+                    .map { line ->
+                        grid.emptyCellsOf(line).filter { cell -> digit in cell.candidates }
+                    }
+                    .filter { cells -> cells.size == 2 }
+                    .tuplesOfSize(2)
+                    .map { tuples -> tuples.flatten() }
+                    .map { cells -> cells.groupBy { cell -> cell.position.coordinate() } }
+                    .filter { groups -> groups.size == 3 }
+                    .mapNotNull { groups ->
+                        val sashimiCells = groups.values.mapNotNull { group -> group.singleOrNull() }
+                        val commonPeers = sashimiCells.map { cell -> cell.position.peers() }
+                            .reduce { peers1, peers2 -> peers1.intersect(peers2) }
+                        val actions = commonPeers.map { pos -> grid.cellAt(pos) }
+                            .filter { cell -> digit in cell.candidates }
+                            .map { cell -> Action.EraseCandidates(cell.position, digit) }
+                        if (actions.isNotEmpty()) {
+                            val reason = Reason(
+                                groups.values.flatMap { cells -> cells.map { cell -> cell.position } },
+                                digit
+                            )
+                            Hint(actions, reason, this)
+                        } else {
+                            null
+                        }
+                    }
+            }
+
+        override fun toString() = "Sashimi X-Wing"
+    }
+
     object LockedCandidates : Technique {
         override fun analyze(grid: Grid): Sequence<Hint> {
             return analyze(grid, lines, boxes.asSequence())
@@ -217,6 +253,16 @@ private fun candidatesOf(cells: Iterable<Cell>): Set<Int> = buildSet {
 }
 
 private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<List<E>> {
+    require(n >= 1)
+
+    return if (n == 1) {
+        map { listOf(it) }
+    } else {
+        flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { it + v } }
+    }
+}
+
+private fun <E> Sequence<E>.tuplesOfSize(n: Int): Sequence<List<E>> {
     require(n >= 1)
 
     return if (n == 1) {

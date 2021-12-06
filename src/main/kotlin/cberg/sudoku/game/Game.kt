@@ -151,7 +151,7 @@ val lines = (rows + cols).asSequence()
 val houses = (rows + cols + boxes).asSequence()
 
 @OptIn(ExperimentalStdlibApi::class)
-private fun Position.peers() = buildSet {
+fun Position.peers() = buildSet {
     this.addAll(rows[row])
     this.addAll(cols[col])
     this.addAll(boxes[box])
