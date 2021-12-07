@@ -252,13 +252,13 @@ private fun candidatesOf(cells: Iterable<Cell>): Set<Int> = buildSet {
     cells.forEach { cell -> addAll(cell.candidates) }
 }
 
-private fun <E> Iterable<E>.tuplesOfSize(n: Int): Iterable<List<E>> {
-    require(n >= 1)
+fun <E> Collection<E>.tuplesOfSize(n: Int): List<Collection<E>> {
+    require(n >= 1) {"n must be >= 1 but is $n"}
 
-    return if (n == 1) {
-        map { listOf(it) }
-    } else {
-        flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { it + v } }
+    return when (n) {
+        size -> listOf(this)
+        1 -> map { listOf(it) }
+        else -> flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { listOf(v) + it } }
     }
 }
 
