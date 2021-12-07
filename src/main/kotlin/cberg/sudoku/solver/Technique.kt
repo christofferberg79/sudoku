@@ -79,7 +79,7 @@ sealed interface Technique {
         override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
             val emptyCells = grid.emptyCellsOf(house)
 
-            candidatesOf(emptyCells)
+            candidatesOf(emptyCells).toList()
                 .tuplesOfSize(n)
                 .map { tuple -> tuple.toSet() }
                 .associateWith { tuple -> emptyCells.filter { cell -> cell.containsCandidatesIn(tuple) } }
@@ -252,14 +252,20 @@ private fun candidatesOf(cells: Iterable<Cell>): Set<Int> = buildSet {
     cells.forEach { cell -> addAll(cell.candidates) }
 }
 
-fun <E> Collection<E>.tuplesOfSize(n: Int): List<Collection<E>> {
-    require(n >= 1) {"n must be >= 1 but is $n"}
+fun <E> List<E>.tuplesOfSize(n: Int): List<List<E>> {
+    require(n >= 1) { "n must be >= 1 but is $n" }
 
-    return when (n) {
-        size -> listOf(this)
-        1 -> map { listOf(it) }
-        else -> flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { listOf(v) + it } }
+    return combinations(size, n).map { it.map { i -> this[i] } }
+}
+
+private fun combinations(n: Int, k: Int): List<List<Int>> {
+    var combinations = (0..n - k).map { listOf(it) }
+    for (i in 1 until k) {
+        combinations = combinations.flatMap { partial ->
+            (partial.last() + 1..n - k + i).map { next -> partial + next }
+        }
     }
+    return combinations
 }
 
 private fun <E> Sequence<E>.tuplesOfSize(n: Int): Sequence<List<E>> {
