@@ -6,7 +6,6 @@ import cberg.sudoku.game.*
     TODO: implement more techniques
 
     - Finned X-Wing
-    - Sashimi X-Wing
     - Swordfish
     - Finned Swordfish
     - Sashimi Swordfish
@@ -101,78 +100,59 @@ sealed interface Technique {
         override fun toString() = "Hidden ${tupleString(n)}"
     }
 
-    object XWing : Technique {
-        override fun analyze(grid: Grid) =
-            analyze(grid, rows, { row }, cols, { col }) + analyze(grid, cols, { col }, rows, { row })
+    abstract class XWingBase(private val groupSize: Int) : Technique {
+        override fun analyze(grid: Grid) = grid.analyze(rows, Position::col) + grid.analyze(cols, Position::row)
 
-        private fun analyze(
-            grid: Grid,
-            primaryLines: List<List<Position>>,
-            primaryIndex: Position.() -> Int,
-            secondaryLines: List<List<Position>>,
-            secondaryIndex: Position.() -> Int
-        ): Sequence<Hint> = singleDigit { digit ->
-            primaryLines
-                .map { primaryLine -> grid.emptyCellsOf(primaryLine).filter { cell -> digit in cell.candidates } }
-                .filter { primaryLine -> primaryLine.size == 2 }
-                .groupBy { primaryLine -> primaryLine.map { cell -> cell.position.secondaryIndex() }.toSet() }
-                .filterValues { primaryLines -> primaryLines.size == 2 }
-                .mapNotNull { (secondaryIndices, primaryLines) ->
-                    // each entry has 2 primaryLines with the digit in the same 2 secondaryLines
-                    check(primaryLines.size == 2 && secondaryIndices.size == 2)
-                    val primaryIndices =
-                        primaryLines.map { primaryLine -> primaryLine.first().position.primaryIndex() }.toSet()
-                    check(primaryIndices.size == 2)
-                    val actions = secondaryIndices.flatMap { secondaryIndex ->
-                        secondaryLines[secondaryIndex].filterNot { position -> position.primaryIndex() in primaryIndices }
-                            .map { position -> grid.cellAt(position) }
-                            .filter { cell -> cell.isEmpty() && digit in cell.candidates }
-                            .map { cell -> Action.EraseCandidates(cell.position, digit) }
-                    }
-                    if (actions.isNotEmpty()) {
-                        val reason = Reason(primaryLines.flatMap { primaryLine -> positionsOf(primaryLine) }, digit)
-                        Hint(actions, reason, this)
-                    } else {
-                        null
-                    }
-                }.asSequence()
-        }
-
-        override fun toString() = "X-Wing"
-    }
-
-    object SashimiXWing : Technique {
-        override fun analyze(grid: Grid) = analyze(grid, rows, Position::col) + analyze(grid, cols, Position::row)
-
-        private fun analyze(grid: Grid, lines: List<List<Position>>, coordinate: Position.() -> Int) =
+        private fun Grid.analyze(lines: List<List<Position>>, coordinate: Position.() -> Int) =
             singleDigit { digit ->
                 lines.asSequence()
-                    .map { line ->
-                        grid.emptyCellsOf(line).filter { cell -> digit in cell.candidates }
-                    }
-                    .filter { cells -> cells.size == 2 }
+                    .map { line -> emptyCellsOf(line)
+                        .filter { cell -> digit in cell.candidates }
+                        .map { cell -> cell.position }}
+                    .filter { line -> line.size == 2 }
                     .tuplesOfSize(2)
                     .map { tuples -> tuples.flatten() }
-                    .map { cells -> cells.groupBy { cell -> cell.position.coordinate() } }
-                    .filter { groups -> groups.size == 3 }
+                    .map { positions -> positions.groupBy { position -> coordinate(position) } }
+                    .filter { groups -> groups.size == groupSize }
                     .mapNotNull { groups ->
-                        val sashimiCells = groups.values.mapNotNull { group -> group.singleOrNull() }
-                        val commonPeers = sashimiCells.map { cell -> cell.position.peers() }
-                            .reduce { peers1, peers2 -> peers1.intersect(peers2) }
-                        val actions = commonPeers.map { pos -> grid.cellAt(pos) }
+                        val actions = getActionPositions(groups)
+                            .map { pos -> cellAt(pos) }
                             .filter { cell -> digit in cell.candidates }
                             .map { cell -> Action.EraseCandidates(cell.position, digit) }
+
                         if (actions.isNotEmpty()) {
-                            val reason = Reason(
-                                groups.values.flatMap { cells -> cells.map { cell -> cell.position } },
-                                digit
-                            )
-                            Hint(actions, reason, this)
+                            val reason = Reason(groups.values.flatten(), digit)
+                            Hint(actions, reason, this@XWingBase)
                         } else {
                             null
                         }
                     }
             }
+
+        abstract fun getActionPositions(groups: Map<Int, List<Position>>): Collection<Position>
+
+    }
+
+    object XWing : XWingBase(2) {
+        override fun getActionPositions(groups: Map<Int, List<Position>>): List<Position> {
+            val positions: List<Position> = groups.values.flatMap { (pos1, pos2) ->
+                if (pos1.row == pos2.row) {
+                    rows[pos1.row] - pos1 - pos2
+                } else {
+                    cols[pos1.col] - pos1 - pos2
+                }
+            }
+            return positions
+        }
+
+        override fun toString() = "X-Wing"
+    }
+
+    object SashimiXWing : XWingBase(3) {
+        override fun getActionPositions(groups: Map<Int, List<Position>>): Set<Position> {
+            val sashimiCells = groups.values.mapNotNull { group -> group.singleOrNull() }
+            return sashimiCells.commonPeers()
+        }
 
         override fun toString() = "Sashimi X-Wing"
     }
@@ -226,6 +206,10 @@ sealed interface Technique {
         override fun toString() = "Locked Candidates"
     }
 }
+
+private fun List<Position>.commonPeers() =
+    map { position -> position.peers() }
+        .reduce { peers1, peers2 -> peers1.intersect(peers2) }
 
 fun singleDigit(block: (digit: Int) -> Sequence<Hint>): Sequence<Hint> =
     Grid.digits.asSequence().flatMap(block)
