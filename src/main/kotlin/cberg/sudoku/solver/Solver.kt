@@ -2,7 +2,6 @@ package cberg.sudoku.solver
 
 import cberg.sudoku.game.Cell
 import cberg.sudoku.game.Grid
-import cberg.sudoku.game.houses
 import cberg.sudoku.game.setAllCandidates
 
 class Solver {
@@ -29,22 +28,20 @@ class Solver {
 
     private fun Grid.insufficientGivens() = cells.count(Cell::isNotEmpty) < 17
 
-    private fun Grid.duplicateGivens() = houses.any { group ->
-        group.map { position -> cellAt(position) }
-            .filter(Cell::isNotEmpty)
-            .groupingBy(Cell::digit)
+    private fun Grid.duplicateGivens() = houses().any { group ->
+        group.filter { it.isNotEmpty() }
+            .groupingBy { it.digit }
             .eachCount()
             .values.any { it > 1 }
     }
 
-    private fun Grid.noCandidate() = cells.any { square ->
-        square.isEmpty() && square.candidates.isEmpty()
+    private fun Grid.noCandidate() = cells.any { cell ->
+        cell.isEmpty() && cell.candidates.isEmpty()
     }
 
-    private fun Grid.missingCandidate() = houses.any { group ->
+    private fun Grid.missingCandidate() = houses().any { house ->
         Grid.digits.any { digit ->
-            group.map { position -> cellAt(position) }
-                .none { square -> digit == square.digit || digit in square.candidates }
+            house.none { position -> digit == position.digit || digit in position.candidates }
         }
     }
 

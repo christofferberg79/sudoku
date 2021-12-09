@@ -7,6 +7,10 @@ data class Cell(
     val digit: Int?,
     val candidates: Set<Int> = emptySet()
 ) {
+    init {
+        require(digit == null || candidates.isEmpty()) { "A cell cannot have both a digit and candidates" }
+    }
+
     fun isEmpty() = digit == null
     fun isNotEmpty() = digit != null
 }
@@ -24,9 +28,27 @@ data class Grid(
         val digits = (1..N).toSet()
     }
 
-    fun cellAt(position: Position) = cells[position.index]
+    fun houses() = houses.asSequence()
+    fun rows() = rows.asSequence()
+    fun cols() = cols.asSequence()
+    fun boxes() = boxes.asSequence()
+    fun lines() = lines.asSequence()
+    fun commonPeers(positions: List<Position>) = positions.map { position -> position.peers() }
+        .reduce { peers1, peers2 -> peers1 intersect peers2 }
 
-    fun Position.hasCandidate(digit: Int) = cells[index].run { isEmpty() && digit in candidates }
+    val Position.cell: Cell get() = cells[index]
+    val Position.digit: Int? get() = cell.digit
+    val Position.candidates: Set<Int> get() = cell.candidates
+    fun Position.isEmpty() = cell.isEmpty()
+    fun Position.isNotEmpty() = cell.isNotEmpty()
+
+    @OptIn(ExperimentalStdlibApi::class)
+    val Collection<Position>.candidates: Set<Int>
+        get() = buildSet {
+            this@candidates.forEach { position -> addAll(position.candidates) }
+        }
+
+    fun Position.containsCandidatesIn(tuple: Set<Int>) = candidates.any { candidate -> candidate in tuple }
 }
 
 fun Grid(input: String): Grid {
@@ -44,8 +66,7 @@ private val Position.index get() = row * N + col
 private fun Position(index: Int) = Position(row = index / N, col = index % N)
 
 fun Grid.setDigit(position: Position, digit: Int): Grid {
-    val cell = cellAt(position)
-    if (cell.digit == digit) {
+    if (position.digit == digit) {
         return this
     }
 
@@ -55,8 +76,7 @@ fun Grid.setDigit(position: Position, digit: Int): Grid {
 }
 
 fun Grid.erase(position: Position): Grid {
-    val cell = cellAt(position)
-    if (cell.isEmpty() && cell.candidates.isEmpty()) {
+    if (position.isEmpty() && position.candidates.isEmpty()) {
         return this
     }
 
@@ -66,7 +86,7 @@ fun Grid.erase(position: Position): Grid {
 }
 
 fun Grid.toggleCandidate(position: Position, digit: Int): Grid {
-    if (cellAt(position).isNotEmpty()) {
+    if (position.isNotEmpty()) {
         return this
     }
 
@@ -85,8 +105,7 @@ fun Grid.setDigitAndEraseCandidates(position: Position, digit: Int): Grid {
 }
 
 fun Grid.eraseCandidate(position: Position, digit: Int): Grid {
-    val cell = cellAt(position)
-    if (digit !in cell.candidates) {
+    if (digit !in position.candidates) {
         return this
     }
     return updateCell(position) {
@@ -95,8 +114,7 @@ fun Grid.eraseCandidate(position: Position, digit: Int): Grid {
 }
 
 fun Grid.eraseCandidates(position: Position, digits: Set<Int>): Grid {
-    val cell = cellAt(position)
-    if (digits.none { it in cell.candidates }) {
+    if (digits.none { it in position.candidates }) {
         return this
     }
     return updateCell(position) {
@@ -117,7 +135,7 @@ private fun Grid.updateCells(positions: Set<Position>, transform: Cell.() -> Cel
 fun Grid.setAllCandidates() = copy(cells = cells.map { cell ->
     if (cell.isEmpty()) {
         val digitsOfPeers = cell.position.peers()
-            .mapNotNull { position -> cellAt(position).digit }.toSet()
+            .mapNotNull { position -> position.digit }.toSet()
         cell.copy(candidates = digits - digitsOfPeers)
     } else {
         cell
@@ -138,6 +156,6 @@ fun Grid.getStatus(): GameStatus = when {
 
 private fun Grid.isCorrect(): Boolean {
     return houses.all { group ->
-        group.map { position -> cellAt(position).digit }.containsAll(digits)
+        group.map { position -> position.digit }.containsAll(digits)
     }
 }

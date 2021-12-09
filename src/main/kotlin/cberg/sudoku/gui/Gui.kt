@@ -143,7 +143,7 @@ fun Game(
     ) { position ->
         val focusRequester = focusRequesters.getValue(position)
         val focusManager = LocalFocusManager.current
-        val square = grid.cellAt(position)
+        val square = with(grid) { position.cell }
         Square(
             modifier = Modifier.focusOrder(focusRequester) {
                 up = focusRequesters.getValue(position.up())
@@ -152,7 +152,7 @@ fun Game(
                 right = focusRequesters.getValue(position.right())
             },
             cell = square,
-            given = square.position in given,
+            given = position in given,
             analyzing = analyzing,
             onInput = { input ->
                 when (input) {
