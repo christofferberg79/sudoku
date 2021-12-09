@@ -20,190 +20,179 @@ import cberg.sudoku.game.*
  */
 
 
-sealed interface Technique {
-    fun analyze(grid: Grid): Sequence<Hint>
+abstract class Technique(private val name: String) {
+    abstract fun analyze(grid: Grid): Sequence<Hint>
+    override fun toString() = name
+}
 
-    object NakedSingle : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = grid.cells.asSequence().mapNotNull { cell ->
-            cell.candidates.singleOrNull()?.let { candidate ->
-                val position = cell.position
-                Hint(Action.SetDigit(position, candidate), Reason(position, candidate), this)
-            }
+object NakedSingle : Technique("Naked Single") {
+    override fun analyze(grid: Grid): Sequence<Hint> = grid.cells.asSequence().mapNotNull { cell ->
+        cell.candidates.singleOrNull()?.let { candidate ->
+            val position = cell.position
+            Hint(Action.SetDigit(position, candidate), Reason(position, candidate), this)
         }
-
-        override fun toString() = "Naked Single"
     }
+}
 
-    object HiddenSingle : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = singleDigit { digit ->
-            houses.mapNotNull { house ->
-                house.singleOrNull { position -> digit in grid.cellAt(position).candidates }
-                    ?.let { position ->
-                        Hint(Action.SetDigit(position, digit), Reason(position, digit), this)
-                    }
-            }
-        }
-
-        override fun toString() = "Hidden Single"
-    }
-
-    data class NakedTuple(private val n: Int) : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
-            grid.emptyCellsOf(house)
-                .tuplesOfSize(n)
-                .associateWith { cells -> candidatesOf(cells) }
-                .filterValues { candidates -> candidates.size == n }
-                .mapNotNull { (cells, candidates) ->
-                    val positions = positionsOf(cells)
-                    val actions = house
-                        .filterNot { position -> position in positions }
-                        .associateWith { position -> candidates.intersect(grid.cellAt(position).candidates) }
-                        .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
-                        .map { (position, candidatesToErase) ->
-                            Action.EraseCandidates(position, candidatesToErase)
-                        }
-                    if (actions.isNotEmpty()) {
-                        val reason = Reason(positions, candidates)
-                        Hint(actions, reason, this)
-                    } else {
-                        null
-                    }
+object HiddenSingle : Technique("Hidden Single") {
+    override fun analyze(grid: Grid): Sequence<Hint> = singleDigit { digit ->
+        houses.asSequence().mapNotNull { house ->
+            house.singleOrNull { position -> digit in grid.cellAt(position).candidates }
+                ?.let { position ->
+                    Hint(Action.SetDigit(position, digit), Reason(position, digit), this)
                 }
         }
-
-        override fun toString() = "Naked ${tupleString(n)}"
     }
+}
 
-    data class HiddenTuple(private val n: Int) : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> = houses.flatMap { house ->
-            val emptyCells = grid.emptyCellsOf(house)
-
-            candidatesOf(emptyCells).toList()
-                .tuplesOfSize(n)
-                .map { tuple -> tuple.toSet() }
-                .associateWith { tuple -> emptyCells.filter { cell -> cell.containsCandidatesIn(tuple) } }
-                .filterValues { cells -> cells.size == n }
-                .mapNotNull { (tuple, cells) ->
-                    val actions = cells
-                        .associate { cell -> cell.position to cell.candidates - tuple }
-                        .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
-                        .map { (position, candidatesToErase) -> Action.EraseCandidates(position, candidatesToErase) }
-                    if (actions.isNotEmpty()) {
-                        val reason = Reason(positionsOf(cells), tuple)
-                        Hint(actions, reason, this)
-                    } else {
-                        null
+class NakedTuple(private val n: Int) : Technique("Naked ${tupleString(n)}") {
+    override fun analyze(grid: Grid): Sequence<Hint> = houses.asSequence().flatMap { house ->
+        grid.emptyCellsOf(house)
+            .tuplesOfSize(n)
+            .associateWith { cells -> candidatesOf(cells) }
+            .filterValues { candidates -> candidates.size == n }
+            .mapNotNull { (cells, candidates) ->
+                val positions = positionsOf(cells)
+                val actions = house
+                    .filterNot { position -> position in positions }
+                    .associateWith { position -> candidates.intersect(grid.cellAt(position).candidates) }
+                    .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
+                    .map { (position, candidatesToErase) ->
+                        Action.EraseCandidates(position, candidatesToErase)
                     }
-                }
-        }
-
-        override fun toString() = "Hidden ${tupleString(n)}"
-    }
-
-    abstract class XWingBase(private val groupSize: Int) : Technique {
-        override fun analyze(grid: Grid) = grid.analyze(rows, Position::col) + grid.analyze(cols, Position::row)
-
-        private fun Grid.analyze(lines: List<List<Position>>, coordinate: Position.() -> Int) =
-            singleDigit { digit ->
-                lines.asSequence()
-                    .map { line -> emptyCellsOf(line)
-                        .filter { cell -> digit in cell.candidates }
-                        .map { cell -> cell.position }}
-                    .filter { line -> line.size == 2 }
-                    .tuplesOfSize(2)
-                    .map { tuples -> tuples.flatten() }
-                    .map { positions -> positions.groupBy { position -> coordinate(position) } }
-                    .filter { groups -> groups.size == groupSize }
-                    .mapNotNull { groups ->
-                        val actions = getActionPositions(groups)
-                            .map { pos -> cellAt(pos) }
-                            .filter { cell -> digit in cell.candidates }
-                            .map { cell -> Action.EraseCandidates(cell.position, digit) }
-
-                        if (actions.isNotEmpty()) {
-                            val reason = Reason(groups.values.flatten(), digit)
-                            Hint(actions, reason, this@XWingBase)
-                        } else {
-                            null
-                        }
-                    }
-            }
-
-        abstract fun getActionPositions(groups: Map<Int, List<Position>>): Collection<Position>
-
-    }
-
-    object XWing : XWingBase(2) {
-        override fun getActionPositions(groups: Map<Int, List<Position>>): List<Position> {
-            val positions: List<Position> = groups.values.flatMap { (pos1, pos2) ->
-                if (pos1.row == pos2.row) {
-                    rows[pos1.row] - pos1 - pos2
+                if (actions.isNotEmpty()) {
+                    val reason = Reason(positions, candidates)
+                    Hint(actions, reason, this)
                 } else {
-                    cols[pos1.col] - pos1 - pos2
+                    null
                 }
             }
-            return positions
-        }
-
-        override fun toString() = "X-Wing"
     }
+}
 
-    object SashimiXWing : XWingBase(3) {
-        override fun getActionPositions(groups: Map<Int, List<Position>>): Set<Position> {
-            val sashimiCells = groups.values.mapNotNull { group -> group.singleOrNull() }
-            return sashimiCells.commonPeers()
-        }
+class HiddenTuple(private val n: Int) : Technique("Hidden ${tupleString(n)}") {
+    override fun analyze(grid: Grid): Sequence<Hint> = houses.asSequence().flatMap { house ->
+        val emptyCells = grid.emptyCellsOf(house)
 
-        override fun toString() = "Sashimi X-Wing"
+        candidatesOf(emptyCells).toList()
+            .tuplesOfSize(n)
+            .map { tuple -> tuple.toSet() }
+            .associateWith { tuple -> emptyCells.filter { cell -> cell.containsCandidatesIn(tuple) } }
+            .filterValues { cells -> cells.size == n }
+            .mapNotNull { (tuple, cells) ->
+                val actions = cells
+                    .associate { cell -> cell.position to cell.candidates - tuple }
+                    .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
+                    .map { (position, candidatesToErase) -> Action.EraseCandidates(position, candidatesToErase) }
+                if (actions.isNotEmpty()) {
+                    val reason = Reason(positionsOf(cells), tuple)
+                    Hint(actions, reason, this)
+                } else {
+                    null
+                }
+            }
     }
+}
 
-    object LockedCandidates : Technique {
-        override fun analyze(grid: Grid): Sequence<Hint> {
-            return analyze(grid, lines, boxes.asSequence())
-        }
+abstract class XWingBase(private val groupSize: Int, name: String) : Technique(name) {
+    override fun analyze(grid: Grid) = grid.analyze(rows, Position::col) + grid.analyze(cols, Position::row)
 
-        private fun analyze(
-            grid: Grid,
-            lines: Sequence<List<Position>>,
-            boxes: Sequence<List<Position>>
-        ): Sequence<Hint> {
-            return singleDigit { digit ->
-                lines.flatMap { line ->
-                    boxes.mapNotNull { box ->
-                        grid.analyze(line.toSet(), box.toSet(), digit)
+    private fun Grid.analyze(lines: List<List<Position>>, coordinate: Position.() -> Int) =
+        singleDigit { digit ->
+            lines.asSequence()
+                .map { line ->
+                    emptyCellsOf(line)
+                        .filter { cell -> digit in cell.candidates }
+                        .map { cell -> cell.position }
+                }
+                .filter { line -> line.size == 2 }
+                .tuplesOfSize(2)
+                .map { tuples -> tuples.flatten() }
+                .map { positions -> positions.groupBy { position -> coordinate(position) } }
+                .filter { groups -> groups.size == groupSize }
+                .mapNotNull { groups ->
+                    val actions = getActionPositions(groups)
+                        .map { pos -> cellAt(pos) }
+                        .filter { cell -> digit in cell.candidates }
+                        .map { cell -> Action.EraseCandidates(cell.position, digit) }
+
+                    if (actions.isNotEmpty()) {
+                        val reason = Reason(groups.values.flatten(), digit)
+                        Hint(actions, reason, this@XWingBase)
+                    } else {
+                        null
                     }
                 }
-            }
         }
 
-        private fun Grid.analyze(line: Set<Position>, box: Set<Position>, digit: Int): Hint? {
-            val intersection = box.intersect(line)
-            if (intersection.none { it.hasCandidate(digit) }) {
-                return null
+    abstract fun getActionPositions(groups: Map<Int, List<Position>>): Collection<Position>
+
+}
+
+object XWing : XWingBase(2, "X-Wing") {
+    override fun getActionPositions(groups: Map<Int, List<Position>>): List<Position> {
+        val positions: List<Position> = groups.values.flatMap { (pos1, pos2) ->
+            if (pos1.row == pos2.row) {
+                rows[pos1.row] - pos1 - pos2
+            } else {
+                cols[pos1.col] - pos1 - pos2
             }
+        }
+        return positions
+    }
+}
 
-            val restOfLine = line - intersection
-            val lineCellsWithCandidate = restOfLine.filter { it.hasCandidate(digit) }
+object SashimiXWing : XWingBase(3, "Sashimi X-Wing") {
+    override fun getActionPositions(groups: Map<Int, List<Position>>): Set<Position> {
+        val sashimiCells = groups.values.mapNotNull { group -> group.singleOrNull() }
+        return sashimiCells.commonPeers()
+    }
+}
 
-            val restOfBox = box - intersection
-            val boxCellsWithCandidate = restOfBox.filter { it.hasCandidate(digit) }
+object LockedCandidates : Technique("Locked Candidates") {
+    override fun analyze(grid: Grid): Sequence<Hint> {
+        return analyze(grid, lines.asSequence(), boxes.asSequence())
+    }
 
-            val toErase = when {
-                lineCellsWithCandidate.isEmpty() -> boxCellsWithCandidate
-                boxCellsWithCandidate.isEmpty() -> lineCellsWithCandidate
-                else -> emptyList()
+    private fun analyze(
+        grid: Grid,
+        lines: Sequence<List<Position>>,
+        boxes: Sequence<List<Position>>
+    ): Sequence<Hint> {
+        return singleDigit { digit ->
+            lines.flatMap { line ->
+                boxes.mapNotNull { box ->
+                    grid.analyze(line.toSet(), box.toSet(), digit)
+                }
             }
+        }
+    }
 
-            if (toErase.isEmpty()) {
-                return null
-            }
-
-            val actions = toErase.map { position -> Action.EraseCandidates(position, digit) }
-            val reason = Reason(intersection.toList(), digit)
-            return Hint(actions, reason, this@LockedCandidates)
+    private fun Grid.analyze(line: Set<Position>, box: Set<Position>, digit: Int): Hint? {
+        val intersection = box.intersect(line)
+        if (intersection.none { it.hasCandidate(digit) }) {
+            return null
         }
 
-        override fun toString() = "Locked Candidates"
+        val restOfLine = line - intersection
+        val lineCellsWithCandidate = restOfLine.filter { it.hasCandidate(digit) }
+
+        val restOfBox = box - intersection
+        val boxCellsWithCandidate = restOfBox.filter { it.hasCandidate(digit) }
+
+        val toErase = when {
+            lineCellsWithCandidate.isEmpty() -> boxCellsWithCandidate
+            boxCellsWithCandidate.isEmpty() -> lineCellsWithCandidate
+            else -> emptyList()
+        }
+
+        if (toErase.isEmpty()) {
+            return null
+        }
+
+        val actions = toErase.map { position -> Action.EraseCandidates(position, digit) }
+        val reason = Reason(intersection.toList(), digit)
+        return Hint(actions, reason, this@LockedCandidates)
     }
 }
 

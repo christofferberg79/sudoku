@@ -6,22 +6,22 @@ data class Cell(
     val position: Position,
     val digit: Int?,
     val candidates: Set<Int> = emptySet()
-)
-
-fun Cell.isEmpty() = digit == null
-fun Cell.isNotEmpty() = digit != null
+) {
+    fun isEmpty() = digit == null
+    fun isNotEmpty() = digit != null
+}
 
 data class Grid(
     val cells: List<Cell>
 ) {
     init {
-        require(cells.size == 81)
+        require(cells.size == N * N)
     }
 
     override fun toString() = cells.joinToString(separator = "") { s -> "${s.digit ?: '.'}" }
 
     companion object {
-        val digits = (1..9).toSet()
+        val digits = (1..N).toSet()
     }
 
     fun cellAt(position: Position) = cells[position.index]
@@ -39,6 +39,9 @@ fun Grid(input: String): Grid {
 
     return Grid(cells)
 }
+
+private val Position.index get() = row * N + col
+private fun Position(index: Int) = Position(row = index / N, col = index % N)
 
 fun Grid.setDigit(position: Position, digit: Int): Grid {
     val cell = cellAt(position)
@@ -73,12 +76,12 @@ fun Grid.toggleCandidate(position: Position, digit: Int): Grid {
 }
 
 fun Grid.setDigitAndEraseCandidates(position: Position, digit: Int): Grid {
-    val newGame = setDigit(position, digit)
-    if (newGame == this) {
+    val newGrid = setDigit(position, digit)
+    if (newGrid == this) {
         return this
     }
 
-    return newGame.updateCells(position.peers()) { copy(candidates = candidates - digit) }
+    return newGrid.updateCells(position.peers()) { copy(candidates = candidates - digit) }
 }
 
 fun Grid.eraseCandidate(position: Position, digit: Int): Grid {
@@ -137,23 +140,4 @@ private fun Grid.isCorrect(): Boolean {
     return houses.all { group ->
         group.map { position -> cellAt(position).digit }.containsAll(digits)
     }
-}
-
-private const val n = 9
-private val Position.index get() = row * n + col
-private fun Position(index: Int) = Position(row = index / n, col = index % n)
-
-private val positions = List(n * n) { index -> Position(index) }
-val rows = List(n) { row -> positions.filter { it.row == row } }
-val cols = List(n) { col -> positions.filter { it.col == col } }
-val boxes = List(n) { block -> positions.filter { it.box == block } }
-val lines = (rows + cols).asSequence()
-val houses = (rows + cols + boxes).asSequence()
-
-@OptIn(ExperimentalStdlibApi::class)
-fun Position.peers() = buildSet {
-    this.addAll(rows[row])
-    this.addAll(cols[col])
-    this.addAll(boxes[box])
-    this.remove(this@peers)
 }

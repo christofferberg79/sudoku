@@ -1,8 +1,6 @@
 package cberg.sudoku.solver
 
 import cberg.sudoku.game.*
-import cberg.sudoku.solver.Technique.HiddenSingle
-import cberg.sudoku.solver.Technique.NakedSingle
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -91,6 +89,6 @@ class TechniqueTest {
         assertContains(hints, Hint(Action.SetDigit(r3c7, 2), Reason(r3c7, 2), HiddenSingle))
         assertContains(hints, Hint(Action.SetDigit(r7c3, 2), Reason(r7c3, 2), HiddenSingle))
         assertContains(hints, Hint(Action.SetDigit(r6c5, 7), Reason(r6c5, 7), HiddenSingle))
-        assertContains(hints, Hint(Action.SetDigit(r8c3, 7), Reason(r8c3, 7 ), HiddenSingle))
+        assertContains(hints, Hint(Action.SetDigit(r8c3, 7), Reason(r8c3, 7), HiddenSingle))
     }
 }

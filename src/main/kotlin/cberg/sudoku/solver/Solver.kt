@@ -1,7 +1,9 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.*
-import cberg.sudoku.solver.Technique.*
+import cberg.sudoku.game.Cell
+import cberg.sudoku.game.Grid
+import cberg.sudoku.game.houses
+import cberg.sudoku.game.setAllCandidates
 
 class Solver {
     fun solve(input: String): Solution {
