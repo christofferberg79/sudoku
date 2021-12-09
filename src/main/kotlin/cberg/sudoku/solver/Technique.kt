@@ -1,7 +1,6 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.Grid
-import cberg.sudoku.game.Position
+import cberg.sudoku.game.*
 
 /*
     TODO: implement more techniques
@@ -22,13 +21,13 @@ import cberg.sudoku.game.Position
 
 
 abstract class Technique(private val name: String) {
-    fun analyze(grid: Grid) = grid._analyze()
-    abstract fun Grid._analyze(): Sequence<Hint>
+    fun analyze(grid: Grid) = grid.analyzeInternal()
+    protected abstract fun Grid.analyzeInternal(): Sequence<Hint>
     override fun toString() = name
 }
 
 object NakedSingle : Technique("Naked Single") {
-    override fun Grid._analyze(): Sequence<Hint> = cells.asSequence().mapNotNull { cell ->
+    override fun Grid.analyzeInternal() = cells().mapNotNull { cell ->
         cell.candidates.singleOrNull()?.let { candidate ->
             Hint(Action.SetDigit(cell.position, candidate), Reason(cell.position, candidate), this@NakedSingle)
         }
@@ -36,7 +35,7 @@ object NakedSingle : Technique("Naked Single") {
 }
 
 object HiddenSingle : Technique("Hidden Single") {
-    override fun Grid._analyze(): Sequence<Hint> = singleDigit { digit ->
+    override fun Grid.analyzeInternal() = singleDigit { digit ->
         houses().mapNotNull { house ->
             house.singleOrNull { position -> digit in position.candidates }
                 ?.let { position ->
@@ -47,7 +46,7 @@ object HiddenSingle : Technique("Hidden Single") {
 }
 
 class NakedTuple(private val n: Int) : Technique("Naked ${tupleString(n)}") {
-    override fun Grid._analyze(): Sequence<Hint> = houses().flatMap { house ->
+    override fun Grid.analyzeInternal() = houses().flatMap { house ->
         house.filter { position -> position.isEmpty() }
             .tuplesOfSize(n)
             .associateWith { positions -> positions.candidates }
@@ -71,7 +70,7 @@ class NakedTuple(private val n: Int) : Technique("Naked ${tupleString(n)}") {
 }
 
 class HiddenTuple(private val n: Int) : Technique("Hidden ${tupleString(n)}") {
-    override fun Grid._analyze(): Sequence<Hint> = houses().flatMap { house ->
+    override fun Grid.analyzeInternal() = houses().flatMap { house ->
         val emptyPositions = house.filter { position -> position.isEmpty() }
 
         emptyPositions.candidates.toList()
@@ -95,7 +94,7 @@ class HiddenTuple(private val n: Int) : Technique("Hidden ${tupleString(n)}") {
 }
 
 abstract class XWingBase(private val groupSize: Int, name: String) : Technique(name) {
-    override fun Grid._analyze() = analyze(rows(), Position::col) + analyze(cols(), Position::row)
+    override fun Grid.analyzeInternal() = analyze(rows(), Position::col) + analyze(cols(), Position::row)
 
     private fun Grid.analyze(lines: Sequence<List<Position>>, coordinate: Position.() -> Int) =
         singleDigit { digit ->
@@ -130,9 +129,9 @@ object XWing : XWingBase(2, "X-Wing") {
     override fun Grid.getActionPositions(groups: Map<Int, List<Position>>): List<Position> {
         return groups.values.flatMap { (pos1, pos2) ->
             if (pos1.row == pos2.row) {
-                rows().elementAt(pos1.row) - pos1 - pos2
+                rows.elementAt(pos1.row) - pos1 - pos2
             } else {
-                cols().elementAt(pos1.col) - pos1 - pos2
+                cols.elementAt(pos1.col) - pos1 - pos2
             }
         }
     }
@@ -141,12 +140,12 @@ object XWing : XWingBase(2, "X-Wing") {
 object SashimiXWing : XWingBase(3, "Sashimi X-Wing") {
     override fun Grid.getActionPositions(groups: Map<Int, List<Position>>): Collection<Position> {
         val sashimiPositions = groups.values.mapNotNull { group -> group.singleOrNull() }
-        return commonPeers(sashimiPositions)
+        return sashimiPositions.commonPeers()
     }
 }
 
 object LockedCandidates : Technique("Locked Candidates") {
-    override fun Grid._analyze(): Sequence<Hint> = singleDigit { digit ->
+    override fun Grid.analyzeInternal() = singleDigit { digit ->
         lines().flatMap { line ->
             boxes().mapNotNull { box ->
                 analyze(line.toSet(), box.toSet(), digit)
@@ -182,43 +181,15 @@ object LockedCandidates : Technique("Locked Candidates") {
     }
 }
 
-fun singleDigit(block: (digit: Int) -> Sequence<Hint>): Sequence<Hint> =
-    Grid.digits.asSequence().flatMap(block)
+private fun digits() = DIGITS.asSequence()
+private fun Grid.cells() = cells.asSequence()
+private fun houses() = houses.asSequence()
+private fun rows() = rows.asSequence()
+private fun cols() = cols.asSequence()
+private fun boxes() = boxes.asSequence()
+private fun lines() = lines.asSequence()
 
-private fun tupleString(n: Int): String {
-    require(n >= 1)
-    return when (n) {
-        1 -> "Single"
-        2 -> "Pair"
-        3 -> "Triple"
-        4 -> "Quadruple"
-        5 -> "Quintuple"
-        else -> "$n-tuple"
-    }
-}
+private fun List<Position>.commonPeers() = map(Position::peers)
+    .reduce { peers1, peers2 -> peers1 intersect peers2 }
 
-fun <E> List<E>.tuplesOfSize(n: Int): List<List<E>> {
-    require(n >= 1) { "n must be >= 1 but is $n" }
-
-    return combinations(size, n).map { it.map { i -> this[i] } }
-}
-
-private fun combinations(n: Int, k: Int): List<List<Int>> {
-    var combinations = (0..n - k).map { listOf(it) }
-    for (i in 1 until k) {
-        combinations = combinations.flatMap { partial ->
-            (partial.last() + 1..n - k + i).map { next -> partial + next }
-        }
-    }
-    return combinations
-}
-
-private fun <E> Sequence<E>.tuplesOfSize(n: Int): Sequence<List<E>> {
-    require(n >= 1)
-
-    return if (n == 1) {
-        map { listOf(it) }
-    } else {
-        flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { it + v } }
-    }
-}
+private fun singleDigit(block: (digit: Int) -> Sequence<Hint>) = digits().flatMap(block)

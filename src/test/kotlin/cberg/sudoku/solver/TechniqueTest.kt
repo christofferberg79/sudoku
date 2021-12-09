@@ -18,7 +18,7 @@ class TechniqueTest {
 
         val digit = 8
         val position = r7c3
-        grid = grid.eraseCandidates(position, Grid.digits - digit)
+        grid = grid.eraseCandidates(position, DIGITS - digit)
 
         val hints = NakedSingle.analyze(grid).toList()
         assertEquals(1, hints.size)

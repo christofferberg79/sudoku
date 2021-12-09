@@ -1,8 +1,6 @@
 package cberg.sudoku.solver
 
-import cberg.sudoku.game.Cell
-import cberg.sudoku.game.Grid
-import cberg.sudoku.game.setAllCandidates
+import cberg.sudoku.game.*
 
 class Solver {
     fun solve(input: String): Solution {
@@ -28,7 +26,7 @@ class Solver {
 
     private fun Grid.insufficientGivens() = cells.count(Cell::isNotEmpty) < 17
 
-    private fun Grid.duplicateGivens() = houses().any { group ->
+    private fun Grid.duplicateGivens() = houses.any { group ->
         group.filter { it.isNotEmpty() }
             .groupingBy { it.digit }
             .eachCount()
@@ -39,8 +37,8 @@ class Solver {
         cell.isEmpty() && cell.candidates.isEmpty()
     }
 
-    private fun Grid.missingCandidate() = houses().any { house ->
-        Grid.digits.any { digit ->
+    private fun Grid.missingCandidate() = houses.any { house ->
+        DIGITS.any { digit ->
             house.none { position -> digit == position.digit || digit in position.candidates }
         }
     }

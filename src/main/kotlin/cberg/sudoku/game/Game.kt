@@ -1,7 +1,5 @@
 package cberg.sudoku.game
 
-import cberg.sudoku.game.Grid.Companion.digits
-
 data class Cell(
     val position: Position,
     val digit: Int?,
@@ -15,6 +13,8 @@ data class Cell(
     fun isNotEmpty() = digit != null
 }
 
+val DIGITS = (1..N).toSet()
+
 data class Grid(
     val cells: List<Cell>
 ) {
@@ -23,18 +23,6 @@ data class Grid(
     }
 
     override fun toString() = cells.joinToString(separator = "") { s -> "${s.digit ?: '.'}" }
-
-    companion object {
-        val digits = (1..N).toSet()
-    }
-
-    fun houses() = houses.asSequence()
-    fun rows() = rows.asSequence()
-    fun cols() = cols.asSequence()
-    fun boxes() = boxes.asSequence()
-    fun lines() = lines.asSequence()
-    fun commonPeers(positions: List<Position>) = positions.map { position -> position.peers() }
-        .reduce { peers1, peers2 -> peers1 intersect peers2 }
 
     val Position.cell: Cell get() = cells[index]
     val Position.digit: Int? get() = cell.digit
@@ -54,7 +42,7 @@ data class Grid(
 fun Grid(input: String): Grid {
     val cells = List(81) { index ->
         val digit = input.getOrNull(index)?.digitToIntOrNull()?.let {
-            if (it in digits) it else null
+            if (it in DIGITS) it else null
         }
         Cell(Position(index), digit)
     }
@@ -136,7 +124,7 @@ fun Grid.setAllCandidates() = copy(cells = cells.map { cell ->
     if (cell.isEmpty()) {
         val digitsOfPeers = cell.position.peers()
             .mapNotNull { position -> position.digit }.toSet()
-        cell.copy(candidates = digits - digitsOfPeers)
+        cell.copy(candidates = DIGITS - digitsOfPeers)
     } else {
         cell
     }
@@ -156,6 +144,6 @@ fun Grid.getStatus(): GameStatus = when {
 
 private fun Grid.isCorrect(): Boolean {
     return houses.all { group ->
-        group.map { position -> position.digit }.containsAll(digits)
+        group.map { position -> position.digit }.containsAll(DIGITS)
     }
 }

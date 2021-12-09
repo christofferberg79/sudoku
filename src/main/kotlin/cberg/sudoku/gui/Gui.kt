@@ -45,7 +45,7 @@ fun Sudoku(model: Model) {
             .padding(10.dp)
             .onKeyEvent { event ->
                 val digit = event.key.toSudokuDigit()
-                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && digit in Grid.digits) {
+                if (event.isCtrlPressed && event.type == KeyEventType.KeyDown && digit in DIGITS) {
                     checkNotNull(digit)
                     model.analyze(digit)
                     return@onKeyEvent true
@@ -322,7 +322,7 @@ private fun KeyEvent.toSquareInput(): SquareInput? = when {
     isTypedEvent -> {
         when (val digit = utf16CodePoint.toChar().digitToIntOrNull()) {
             null -> null
-            in Grid.digits -> SquareInput.Digit(digit)
+            in DIGITS -> SquareInput.Digit(digit)
             else -> null
         }
     }
