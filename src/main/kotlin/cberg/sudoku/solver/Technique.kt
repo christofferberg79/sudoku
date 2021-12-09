@@ -204,10 +204,13 @@ fun singleDigit(block: (digit: Int) -> Sequence<Hint>): Sequence<Hint> =
     Grid.digits.asSequence().flatMap(block)
 
 private fun tupleString(n: Int): String {
-    require(n >= 2)
+    require(n >= 1)
     return when (n) {
+        1 -> "Single"
         2 -> "Pair"
         3 -> "Triple"
+        4 -> "Quadruple"
+        5 -> "Quintuple"
         else -> "$n-tuple"
     }
 }
