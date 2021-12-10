@@ -35,8 +35,6 @@ data class Grid(
         get() = buildSet {
             this@candidates.forEach { position -> addAll(position.candidates) }
         }
-
-    fun Position.containsCandidatesIn(tuple: Set<Int>) = candidates.any { candidate -> candidate in tuple }
 }
 
 fun Grid(input: String): Grid {

@@ -45,51 +45,49 @@ object HiddenSingle : Technique("Hidden Single") {
     }
 }
 
-class NakedTuple(private val n: Int) : Technique("Naked ${tupleString(n)}") {
+abstract class TupleBase(private val n: Int, name: String) : Technique(name) {
     override fun Grid.analyzeInternal() = houses().flatMap { house ->
-        house.filter { position -> position.isEmpty() }
-            .tuplesOfSize(n)
-            .associateWith { positions -> positions.candidates }
-            .filterValues { candidates -> candidates.size == n }
-            .mapNotNull { (positions, candidates) ->
-                val actions = house
-                    .filterNot { position -> position in positions }
-                    .associateWith { position -> candidates intersect position.candidates }
-                    .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
-                    .map { (position, candidatesToErase) ->
-                        Action.EraseCandidates(position, candidatesToErase)
-                    }
-                if (actions.isNotEmpty()) {
-                    val reason = Reason(positions, candidates)
-                    Hint(actions, reason, this@NakedTuple)
-                } else {
-                    null
-                }
-            }
+        house.candidates.toList().tuplesOfSize(n).mapNotNull { tuple ->
+            analyze(house.toSet(), tuple.toSet())
+        }
+    }
+
+    protected abstract fun Grid.analyze(house: Set<Position>, tuple: Set<Int>): Hint?
+}
+
+class NakedTuple(n: Int) : TupleBase(n, "Naked ${tupleString(n)}") {
+    override fun Grid.analyze(house: Set<Position>, tuple: Set<Int>): Hint? {
+        val (naked, rest) = house.filter { it.isEmpty() }.partition { tuple.containsAll(it.candidates) }
+        if (naked.size != tuple.size) {
+            return null
+        }
+        val toErase = rest.associateWith { tuple intersect it.candidates }.filterValues { it.isNotEmpty() }
+        if (toErase.isEmpty()) {
+            return null
+        }
+
+        val reason = Reason(naked, tuple)
+        val actions = toErase.map { (position, candidates) -> Action.EraseCandidates(position, candidates) }
+
+        return Hint(actions, reason, this@NakedTuple)
     }
 }
 
-class HiddenTuple(private val n: Int) : Technique("Hidden ${tupleString(n)}") {
-    override fun Grid.analyzeInternal() = houses().flatMap { house ->
-        val emptyPositions = house.filter { position -> position.isEmpty() }
+class HiddenTuple(n: Int) : TupleBase(n, "Hidden ${tupleString(n)}") {
+    override fun Grid.analyze(house: Set<Position>, tuple: Set<Int>): Hint? {
+        val hidden = house.filter { position -> position.candidates.any { it in tuple } }
+        if (hidden.size != tuple.size) {
+            return null
+        }
+        val toErase = hidden.associateWith { it.candidates - tuple }.filterValues { it.isNotEmpty() }
+        if (toErase.isEmpty()) {
+            return null
+        }
 
-        emptyPositions.candidates.toList()
-            .tuplesOfSize(n)
-            .map { tuple -> tuple.toSet() }
-            .associateWith { tuple -> emptyPositions.filter { position -> position.containsCandidatesIn(tuple) } }
-            .filterValues { positions -> positions.size == n }
-            .mapNotNull { (tuple, positions) ->
-                val actions = positions
-                    .associateWith { position -> position.candidates - tuple }
-                    .filterValues { candidatesToErase -> candidatesToErase.isNotEmpty() }
-                    .map { (position, candidatesToErase) -> Action.EraseCandidates(position, candidatesToErase) }
-                if (actions.isNotEmpty()) {
-                    val reason = Reason(positions, tuple)
-                    Hint(actions, reason, this@HiddenTuple)
-                } else {
-                    null
-                }
-            }
+        val reason = Reason(hidden, tuple)
+        val actions = toErase.map { (position, candidates) -> Action.EraseCandidates(position, candidates) }
+
+        return Hint(actions, reason, this@HiddenTuple)
     }
 }
 
