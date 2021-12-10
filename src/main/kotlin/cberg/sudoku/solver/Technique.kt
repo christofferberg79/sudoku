@@ -91,54 +91,63 @@ class HiddenTuple(n: Int) : TupleBase(n, "Hidden ${tupleString(n)}") {
     }
 }
 
-abstract class XWingBase(private val groupSize: Int, name: String) : Technique(name) {
-    override fun Grid.analyzeInternal() = analyze(rows(), Position::col) + analyze(cols(), Position::row)
+abstract class XWingBase(name: String) : Technique(name) {
+    override fun Grid.analyzeInternal(): Sequence<Hint> = digits().flatMap { digit ->
+        analyze(rows(), digit) + analyze(cols(), digit)
+    }
 
-    private fun Grid.analyze(lines: Sequence<List<Position>>, coordinate: Position.() -> Int) =
-        digits().flatMap { digit ->
-            lines
-                .map { line ->
-                    line.filter { position -> digit in position.candidates }
-                }
-                .filter { line -> line.size == 2 }
-                .tuplesOfSize(2)
-                .map { tuples -> tuples.flatten() }
-                .map { positions -> positions.groupBy { position -> coordinate(position) } }
-                .filter { groups -> groups.size == groupSize }
-                .mapNotNull { groups ->
-                    val actions = getActionPositions(groups)
-                        .filter { position -> digit in position.candidates }
-                        .map { position -> Action.EraseCandidates(position, digit) }
-
-                    if (actions.isNotEmpty()) {
-                        val reason = Reason(groups.values.flatten(), digit)
-                        Hint(actions, reason, this@XWingBase)
-                    } else {
-                        null
-                    }
-                }
-        }
-
-    abstract fun Grid.getActionPositions(groups: Map<Int, List<Position>>): Collection<Position>
-
-}
-
-object XWing : XWingBase(2, "X-Wing") {
-    override fun Grid.getActionPositions(groups: Map<Int, List<Position>>): List<Position> {
-        return groups.values.flatMap { (pos1, pos2) ->
-            if (pos1.row == pos2.row) {
-                rows.elementAt(pos1.row) - pos1 - pos2
-            } else {
-                cols.elementAt(pos1.col) - pos1 - pos2
+    private fun Grid.analyze(lines: Sequence<List<Position>>, digit: Int) =
+        lines
+            .map { line -> line.filter { p -> digit in p.candidates } }
+            .filter { line -> line.size == 2 }
+            .tuplesOfSize(2)
+            .map { it.flatten() }
+            .mapNotNull { positions ->
+                val affectedPositions = findAffectedPositions(positions)
+                createHint(affectedPositions, positions, digit)
             }
+
+    protected abstract fun findAffectedPositions(positions: List<Position>): List<Position>
+
+    private fun Grid.createHint(affectedPositions: List<Position>, positions: List<Position>, digit: Int): Hint? {
+        val toErase = affectedPositions.filter { p -> digit in p.candidates }
+        if (toErase.isEmpty()) {
+            return null
         }
+
+        val reason = Reason(positions, digit)
+        val actions = toErase.map { position -> Action.EraseCandidates(position, digit) }
+
+        return Hint(actions, reason, this@XWingBase)
     }
 }
 
-object SashimiXWing : XWingBase(3, "Sashimi X-Wing") {
-    override fun Grid.getActionPositions(groups: Map<Int, List<Position>>): Collection<Position> {
-        val sashimiPositions = groups.values.mapNotNull { group -> group.singleOrNull() }
-        return sashimiPositions.commonPeers()
+object XWing : XWingBase("X-Wing") {
+    override fun findAffectedPositions(positions: List<Position>): List<Position> {
+        val cs = positions.map { p -> p.col }.toSet()
+        val rs = positions.map { p -> p.row }.toSet()
+        if (cs.size != 2 || rs.size != 2) {
+            return emptyList() // not a rectangle => not an X-Wing
+        }
+
+        return cs.flatMap { cols[it] } + rs.flatMap { rows[it] } - positions.toSet()
+    }
+}
+
+object SashimiXWing : XWingBase("Sashimi X-Wing") {
+    override fun findAffectedPositions(positions: List<Position>): List<Position> {
+        val cols = positions.groupBy { it.col }
+        val rows = positions.groupBy { it.row }
+
+        val lines = when {
+            cols.size == 3 -> cols
+            rows.size == 3 -> rows
+            else -> return emptyList()
+        }
+
+        val sashimi = lines.values.filter { it.size == 1 }.flatten()
+
+        return (sashimi.commonPeers() - sashimi.toSet()).toList()
     }
 }
 
