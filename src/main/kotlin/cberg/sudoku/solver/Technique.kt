@@ -35,7 +35,7 @@ object NakedSingle : Technique("Naked Single") {
 }
 
 object HiddenSingle : Technique("Hidden Single") {
-    override fun Grid.analyzeInternal() = singleDigit { digit ->
+    override fun Grid.analyzeInternal() = digits().flatMap { digit ->
         houses().mapNotNull { house ->
             house.singleOrNull { position -> digit in position.candidates }
                 ?.let { position ->
@@ -95,7 +95,7 @@ abstract class XWingBase(private val groupSize: Int, name: String) : Technique(n
     override fun Grid.analyzeInternal() = analyze(rows(), Position::col) + analyze(cols(), Position::row)
 
     private fun Grid.analyze(lines: Sequence<List<Position>>, coordinate: Position.() -> Int) =
-        singleDigit { digit ->
+        digits().flatMap { digit ->
             lines
                 .map { line ->
                     line.filter { position -> digit in position.candidates }
@@ -143,7 +143,7 @@ object SashimiXWing : XWingBase(3, "Sashimi X-Wing") {
 }
 
 object LockedCandidates : Technique("Locked Candidates") {
-    override fun Grid.analyzeInternal() = singleDigit { digit ->
+    override fun Grid.analyzeInternal() = digits().flatMap { digit ->
         lines().flatMap { line ->
             boxes().mapNotNull { box ->
                 analyze(line.toSet(), box.toSet(), digit)
@@ -189,5 +189,3 @@ private fun lines() = lines.asSequence()
 
 private fun List<Position>.commonPeers() = map(Position::peers)
     .reduce { peers1, peers2 -> peers1 intersect peers2 }
-
-private fun singleDigit(block: (digit: Int) -> Sequence<Hint>) = digits().flatMap(block)
