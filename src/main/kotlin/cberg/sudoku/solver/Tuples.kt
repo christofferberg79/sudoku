@@ -28,12 +28,44 @@ private fun combinations(n: Int, k: Int): List<List<Int>> {
     return combinations
 }
 
-fun <E> Sequence<E>.tuplesOfSize(n: Int): Sequence<List<E>> {
-    require(n >= 1)
+fun <E> Sequence<E>.tuplesOfSize(n: Int) = object : Sequence<List<E>> {
+    override fun iterator() = TupleIterator(n, this@tuplesOfSize.iterator())
+}
 
-    return if (n == 1) {
-        map { listOf(it) }
-    } else {
-        flatMapIndexed { i, v -> drop(i + 1).tuplesOfSize(n - 1).map { it + v } }
+class TupleIterator<E>(private val n: Int, private val source: Iterator<E>) : AbstractIterator<List<E>>() {
+    private val computedTuples = mutableListOf<List<E>>()
+    private val elements = mutableListOf<E>()
+
+    override fun computeNext() {
+        if (computedTuples.isEmpty()) {
+            if (elements.isEmpty()) {
+                computeFirstTuple()
+            } else if (source.hasNext()) {
+                computeNewTuples()
+            }
+        }
+
+        if (computedTuples.isEmpty()) {
+            done()
+        } else {
+            setNext(computedTuples.removeFirst())
+        }
+    }
+
+    private fun computeFirstTuple() {
+        val tuple = generateSequence { if (source.hasNext()) source.next() else null }
+            .take(n).toList()
+        if (tuple.size == n) {
+            elements += tuple
+            computedTuples += tuple
+        }
+    }
+
+    private fun computeNewTuples() {
+        val e = source.next()
+        for (small in elements.tuplesOfSize(n - 1)) {
+            computedTuples += small + e
+        }
+        elements += e
     }
 }
