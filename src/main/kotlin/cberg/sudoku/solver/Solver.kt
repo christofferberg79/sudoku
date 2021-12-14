@@ -59,7 +59,7 @@ private val techniques = sequenceOf(
     NakedTuple(3),
     HiddenTuple(3),
     XWing,
-    SashimiXWing,
+    SingleFinSashimiXWing,
     Swordfish
 )
 
