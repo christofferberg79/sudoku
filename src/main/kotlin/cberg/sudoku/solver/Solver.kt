@@ -59,7 +59,8 @@ private val techniques = sequenceOf(
     NakedTuple(3),
     HiddenTuple(3),
     XWing,
-    SashimiXWing
+    SashimiXWing,
+    Swordfish
 )
 
 fun solve(grid: Grid) = generateSequence(grid, ::applyFirstHint).last()

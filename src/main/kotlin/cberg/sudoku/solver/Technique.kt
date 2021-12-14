@@ -151,6 +151,44 @@ object SashimiXWing : XWingBase("Sashimi X-Wing") {
     }
 }
 
+object Swordfish : Technique("Swordfish") {
+    override fun Grid.analyzeInternal(): Sequence<Hint> = digits().flatMap { digit ->
+        analyze(rows(), digit) + analyze(cols(), digit)
+    }
+
+    private fun Grid.analyze(lines: Sequence<List<Position>>, digit: Int) = lines
+        .map { line -> line.filter { p -> digit in p.candidates } }
+        .filter { line -> line.size in (2..3) }
+        .tuplesOfSize(3)
+        .map { it.flatten() }
+        .mapNotNull { positions ->
+            val affectedPositions = findAffectedPositions(positions)
+            createHint(affectedPositions, positions, digit)
+        }
+
+    private fun findAffectedPositions(positions: List<Position>): List<Position> {
+        val cs = positions.map { p -> p.col }.toSet()
+        val rs = positions.map { p -> p.row }.toSet()
+        if (cs.size != 3 || rs.size != 3) {
+            return emptyList() // not a Swordfish
+        }
+
+        return cs.flatMap { cols[it] } + rs.flatMap { rows[it] } - positions.toSet()
+    }
+
+    private fun Grid.createHint(affectedPositions: List<Position>, positions: List<Position>, digit: Int): Hint? {
+        val toErase = affectedPositions.filter { p -> digit in p.candidates }
+        if (toErase.isEmpty()) {
+            return null
+        }
+
+        val reason = Reason(positions, digit)
+        val actions = toErase.map { position -> Action.EraseCandidates(position, digit) }
+
+        return Hint(actions, reason, this@Swordfish)
+    }
+}
+
 object LockedCandidates : Technique("Locked Candidates") {
     override fun Grid.analyzeInternal() = digits().flatMap { digit ->
         lines().flatMap { line ->
