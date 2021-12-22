@@ -40,7 +40,6 @@ val boxes = rows.flatten().sortedBy { it.box }.chunked(N)
 val lines = rows + cols
 val houses = rows + cols + boxes
 
-@OptIn(ExperimentalStdlibApi::class)
 fun Position.peers() = buildSet {
     this.addAll(rows[row])
     this.addAll(cols[col])

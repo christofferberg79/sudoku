@@ -30,7 +30,6 @@ data class Grid(
     fun Position.isEmpty() = cell.isEmpty()
     fun Position.isNotEmpty() = cell.isNotEmpty()
 
-    @OptIn(ExperimentalStdlibApi::class)
     val Collection<Position>.candidates: Set<Int>
         get() = buildSet {
             this@candidates.forEach { position -> addAll(position.candidates) }
